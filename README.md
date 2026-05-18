@@ -66,6 +66,45 @@ Tokens are wrapped in Pydantic's `SecretStr` and never appear in logs or `repr()
 
 See [docs/brief-spec.html](docs/brief-spec.html) for the canonical spec (§03 covers the pipeline, §06 covers the Splunk AI stack). Step-by-step playbooks: `docs/step-1.html` through `docs/step-9.html`.
 
+## Use as a GitHub Action
+
+Drop this into `.github/workflows/audit.yml` in any Splunk-app repository:
+
+```yaml
+on:
+  pull_request:
+    paths: ['**.conf', '**/views/*.xml']
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: mhammadjaber00/brief@v1
+        with:
+          target-path: '.'
+          mode: 'offline'
+          fail-below-score: '70'
+          open-pr: 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+What it does on every PR that touches `.conf` or dashboard XML:
+
+1. Scans the app, explains every saved search, generates descriptions for the undescribed ones (Ollama, fully offline by default — no network calls beyond the GitHub API).
+2. Posts a comment on the PR with the readiness score.
+3. Opens a follow-up PR with the proposed `description = …` inserts as a unified diff. Reviewers merge it (or not) — Brief never modifies the original PR's files.
+4. Fails the workflow if the score is below `fail-below-score`.
+
+For live mode (Splunk Hosted Models): pass `SPLUNK_MCP_URL` / `SPLUNK_MCP_TOKEN` as workflow secrets.
+
 ## Architecture
 
 See `architecture_diagram.md` (placeholder, finalized in Step 09).

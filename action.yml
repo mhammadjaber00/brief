@@ -1,0 +1,50 @@
+name: 'Brief — Splunk Agent-Readiness Audit'
+description: 'Audit a Splunk app for AI-agent-readiness on every PR. Emits an HTML report, an MCP manifest, and optionally auto-opens a follow-up PR with proposed description changes.'
+author: 'Mohammad Jaber'
+branding:
+  icon: 'check-circle'
+  color: 'orange'
+
+inputs:
+  target-path:
+    description: 'Path to the Splunk app to audit (relative to repo root).'
+    required: true
+    default: '.'
+  mode:
+    description: 'Generation backend: offline (Ollama, default) or live (Splunk Hosted Models with Ollama fallback).'
+    required: false
+    default: 'offline'
+  app-class:
+    description: 'Classification override: auto | security | general.'
+    required: false
+    default: 'auto'
+  output-dir:
+    description: 'Where to write the audit artifacts (relative to repo root).'
+    required: false
+    default: 'brief-output'
+  open-pr:
+    description: 'Auto-open a follow-up PR with the proposed description diff. Set to "false" to only post the score as a comment.'
+    required: false
+    default: 'true'
+  fail-below-score:
+    description: 'Fail the workflow if the agent-readiness score is below this threshold (0-100). Set to 0 to never fail.'
+    required: false
+    default: '70'
+  splunk-mcp-url:
+    description: 'Splunk MCP Server URL (live mode only). Pass via ${{ secrets.SPLUNK_MCP_URL }}.'
+    required: false
+  splunk-mcp-token:
+    description: 'Splunk MCP Server bearer token (live mode only). Pass via ${{ secrets.SPLUNK_MCP_TOKEN }}.'
+    required: false
+
+outputs:
+  score:
+    description: 'Overall agent-readiness score (0-100).'
+  pr-number:
+    description: 'Number of the auto-opened follow-up PR, or empty if no PR was opened.'
+  report-path:
+    description: 'Path to the generated report.html.'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

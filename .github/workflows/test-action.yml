@@ -1,0 +1,48 @@
+name: Self-test the Brief action
+
+on:
+  pull_request:
+    paths:
+      - 'action.yml'
+      - 'Dockerfile'
+      - 'scripts/action-entrypoint.sh'
+      - 'scripts/open_pr.py'
+      - 'src/brief/**'
+      - '.github/workflows/test-action.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  audit-sample-ta:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Brief against the sample fixture
+        id: brief
+        uses: ./
+        with:
+          target-path: 'tests/fixtures/sample-ta-1'
+          mode: 'offline'
+          fail-below-score: '0'
+          open-pr: 'false'
+          output-dir: 'brief-output'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show score
+        run: echo "score=${{ steps.brief.outputs.score }}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brief-output
+          path: brief-output/
+          if-no-files-found: warn
