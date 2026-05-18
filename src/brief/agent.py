@@ -7,7 +7,7 @@ from typing import Literal
 
 from brief import generator, spl
 from brief.generator.classifier import classify_app
-from brief.generator.schema import GeneratedDescription
+from brief.generator.schema import GeneratedDescription, QualityRubric
 from brief.scanner import scan_app
 from brief.scanner.models import AppScanReport, ObjectSignals
 
@@ -19,35 +19,48 @@ _logger = logging.getLogger(__name__)
 async def audit_app(
     path: Path,
     mode: Mode = "offline",
-) -> tuple[AppScanReport, dict[str, GeneratedDescription]]:
+) -> tuple[AppScanReport, dict[str, GeneratedDescription], dict[str, QualityRubric]]:
     report = scan_app(path)
     app_class = classify_app(report)
     _logger.info("classified %s as %s", report.app_name, app_class)
 
     macros = _macros_dict(report.objects)
     proposed: dict[str, GeneratedDescription] = {}
+    rubrics: dict[str, QualityRubric] = {}
 
     for obj in report.objects:
         if obj.object_type != "savedsearch":
-            continue
-        if obj.description_present:
             continue
         if not obj.raw_definition:
             continue
         try:
             explanation = await spl.explain(obj.raw_definition, macros, mode=mode)
-            description = await generator.generate(
-                explanation=explanation,
-                raw_spl=obj.raw_definition,
-                mode=mode,
-                app_class=app_class,
-            )
-            proposed[obj.name] = description
         except Exception as exc:
-            _logger.warning("failed to generate description for %s: %s", obj.name, exc)
+            _logger.warning("failed to explain SPL for %s: %s", obj.name, exc)
             continue
 
-    return report, proposed
+        if obj.description_present:
+            try:
+                rubrics[obj.name] = await generator.evaluate(
+                    description=obj.description_text or "",
+                    explanation=explanation,
+                    mode=mode,
+                    app_class=app_class,
+                )
+            except Exception as exc:
+                _logger.warning("failed to evaluate quality for %s: %s", obj.name, exc)
+        else:
+            try:
+                proposed[obj.name] = await generator.generate(
+                    explanation=explanation,
+                    raw_spl=obj.raw_definition,
+                    mode=mode,
+                    app_class=app_class,
+                )
+            except Exception as exc:
+                _logger.warning("failed to generate description for %s: %s", obj.name, exc)
+
+    return report, proposed, rubrics
 
 
 def _macros_dict(objects: list[ObjectSignals]) -> dict[str, dict[str, str]]:

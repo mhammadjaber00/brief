@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import typer
@@ -10,13 +11,32 @@ from brief.scanner.models import AppScanReport
 app = typer.Typer(help="Audit Splunk apps for AI-agent-readiness.")
 
 
-@app.command(help="Run the full audit pipeline against a Splunk app directory.")
+@app.command(help="Run the full audit pipeline and write score.json / descriptions.diff / mcp_manifest.yaml / report.html.")
 def audit(
     app_path: Path = typer.Argument(..., exists=True, file_okay=False, dir_okay=True),
     output: Path = typer.Option(Path("./brief-out"), help="Output directory for artifacts."),
-    offline: bool = typer.Option(False, help="Use Ollama fallback instead of Splunk Hosted Models."),
+    offline: bool = typer.Option(True, help="Use Ollama; pass --no-offline to attempt Splunk Hosted Models."),
 ) -> None:
-    raise NotImplementedError("Pipeline implementation pending — see docs/brief-spec.html §03.")
+    from brief.agent import audit_app
+    from brief.emit import emit_all
+    from brief.scoring.score import score_app
+
+    mode = "offline" if offline else "live"
+    console = Console()
+    console.print(f"[dim]scanning[/dim] {app_path} [dim]in {mode} mode…[/dim]")
+
+    report, descriptions, rubrics = asyncio.run(audit_app(app_path, mode=mode))
+    score = score_app(report, descriptions, rubrics)
+    paths = emit_all(report, score, descriptions, rubrics, app_path, output)
+
+    console.print(
+        f"\n[bold]{report.app_name}[/bold] — overall readiness "
+        f"[bold]{score.overall_score}/100[/bold]"
+        f"  ([dim]presence {score.presence_pct} · quality {score.quality_avg} "
+        f"· coverage {score.coverage_pct} · safety {score.safety_pct}[/dim])"
+    )
+    for kind, path in paths.items():
+        console.print(f"  · {kind}: {path}")
 
 
 @app.command(help="Scan a Splunk app and print a readable summary (no LLM calls).")

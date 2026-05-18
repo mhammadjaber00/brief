@@ -64,11 +64,15 @@ def test_audit_app_generates_descriptions_for_undescribed_searches() -> None:
     async def run() -> tuple:
         return await audit_app(SAMPLE, mode="offline")
 
-    report, proposed = asyncio.run(run())
+    report, proposed, rubrics = asyncio.run(run())
 
     undescribed_savedsearches = [
         o for o in report.objects
         if o.object_type == "savedsearch" and not o.description_present
+    ]
+    described_savedsearches = [
+        o for o in report.objects
+        if o.object_type == "savedsearch" and o.description_present
     ]
     assert len(undescribed_savedsearches) >= 1
     assert len(proposed) >= 1
@@ -76,6 +80,9 @@ def test_audit_app_generates_descriptions_for_undescribed_searches() -> None:
         assert isinstance(description, GeneratedDescription)
         assert len(description.description) >= 80
         assert any(c.isalpha() for c in description.description)
+    assert len(rubrics) >= 1
+    for name in rubrics:
+        assert any(o.name == name for o in described_savedsearches)
 
 
 def test_quality_rubric_detects_tautology() -> None:
