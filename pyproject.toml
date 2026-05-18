@@ -11,7 +11,7 @@ requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Brief contributors" }]
 dependencies = [
-    "splunk-sdk-python==3.0.0",
+    "splunk-sdk[ai]==3.0.0",
     "pydantic>=2.7",
     "typer>=0.12",
     "structlog>=24.1",

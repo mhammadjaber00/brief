@@ -1,10 +1,3 @@
-"""Pydantic schema for generator output — the cross-module contract.
-
-Pass this as ``response_model=GeneratedDescription`` to ``Agent.respond()``.
-The splunk-sdk-python v3.0.0 SDK enforces the schema and auto-retries on
-validation failure — do not catch ValidationError as a terminal failure.
-"""
-
 from typing import Literal
 
 from pydantic import BaseModel, Field
