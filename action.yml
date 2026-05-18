@@ -31,10 +31,10 @@ inputs:
     required: false
     default: '70'
   splunk-mcp-url:
-    description: 'Splunk MCP Server URL (live mode only). Pass via ${{ secrets.SPLUNK_MCP_URL }}.'
+    description: 'Splunk MCP Server URL (live mode only). Set as a repository secret and reference it in the calling workflow.'
     required: false
   splunk-mcp-token:
-    description: 'Splunk MCP Server bearer token (live mode only). Pass via ${{ secrets.SPLUNK_MCP_TOKEN }}.'
+    description: 'Splunk MCP Server bearer token (live mode only). Set as a repository secret and reference it in the calling workflow.'
     required: false
 
 outputs:
