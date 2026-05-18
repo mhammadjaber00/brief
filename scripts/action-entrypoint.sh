@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-TARGET_PATH="${INPUT_TARGET_PATH:-.}"
-MODE="${INPUT_MODE:-offline}"
-APP_CLASS="${INPUT_APP_CLASS:-auto}"
-OUTPUT_DIR="${INPUT_OUTPUT_DIR:-brief-output}"
-OPEN_PR="${INPUT_OPEN_PR:-true}"
-FAIL_BELOW_SCORE="${INPUT_FAIL_BELOW_SCORE:-70}"
+_input() {
+    local val
+    val="$(printenv "INPUT_$1" 2>/dev/null || true)"
+    echo "${val:-$2}"
+}
 
-# GITHUB_WORKSPACE is the checked-out repo in GitHub Actions. Resolve target.
+TARGET_PATH="$(_input TARGET-PATH '.')"
+MODE="$(_input MODE 'offline')"
+APP_CLASS="$(_input APP-CLASS 'auto')"
+OUTPUT_DIR="$(_input OUTPUT-DIR 'brief-output')"
+OPEN_PR="$(_input OPEN-PR 'true')"
+FAIL_BELOW_SCORE="$(_input FAIL-BELOW-SCORE '70')"
+SPLUNK_MCP_URL_INPUT="$(_input SPLUNK-MCP-URL '')"
+SPLUNK_MCP_TOKEN_INPUT="$(_input SPLUNK-MCP-TOKEN '')"
+
 WORKSPACE="${GITHUB_WORKSPACE:-/github/workspace}"
 ABS_TARGET="${WORKSPACE}/${TARGET_PATH#./}"
 ABS_OUTPUT="${WORKSPACE}/${OUTPUT_DIR#./}"
@@ -31,11 +38,11 @@ if [[ "$MODE" == "offline" ]] || [[ "$MODE" == "live" ]]; then
     done
 fi
 
-if [[ -n "${INPUT_SPLUNK_MCP_URL:-}" ]]; then
-    export SPLUNK_MCP_URL="$INPUT_SPLUNK_MCP_URL"
+if [[ -n "$SPLUNK_MCP_URL_INPUT" ]]; then
+    export SPLUNK_MCP_URL="$SPLUNK_MCP_URL_INPUT"
 fi
-if [[ -n "${INPUT_SPLUNK_MCP_TOKEN:-}" ]]; then
-    export SPLUNK_MCP_TOKEN="$INPUT_SPLUNK_MCP_TOKEN"
+if [[ -n "$SPLUNK_MCP_TOKEN_INPUT" ]]; then
+    export SPLUNK_MCP_TOKEN="$SPLUNK_MCP_TOKEN_INPUT"
 fi
 
 set +e
