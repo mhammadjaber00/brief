@@ -4,7 +4,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     OLLAMA_HOST=http://127.0.0.1:11434 \
-    OLLAMA_MODELS=/root/.ollama/models
+    OLLAMA_MODELS=/root/.ollama/models \
+    OLLAMA_MODEL=gpt-oss:20b
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates git jq zstd procps && \

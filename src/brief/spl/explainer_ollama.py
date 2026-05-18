@@ -8,7 +8,7 @@ from ollama import AsyncClient
 from brief.spl.models import SPLExplanation
 from brief.spl.prompts import OLLAMA_SYSTEM_PROMPT
 
-_DEFAULT_MODEL = "llama3.1:8b"
+_DEFAULT_MODEL = "gpt-oss:20b"
 _DEFAULT_HOST = "http://localhost:11434"
 
 
