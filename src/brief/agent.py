@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -12,6 +13,9 @@ from brief.scanner import scan_app
 from brief.scanner.models import AppScanReport, ObjectSignals
 
 Mode = Literal["live", "offline"]
+AppClassOverride = Literal["auto", "security", "general"]
+
+ProgressCallback = Callable[[str], None]
 
 _logger = logging.getLogger(__name__)
 
@@ -19,20 +23,33 @@ _logger = logging.getLogger(__name__)
 async def audit_app(
     path: Path,
     mode: Mode = "offline",
+    app_class_override: AppClassOverride = "auto",
+    progress: ProgressCallback | None = None,
 ) -> tuple[AppScanReport, dict[str, GeneratedDescription], dict[str, QualityRubric]]:
+    def report_progress(msg: str) -> None:
+        if progress is not None:
+            progress(msg)
+
+    report_progress("Scanning .conf files and dashboards…")
     report = scan_app(path)
-    app_class = classify_app(report)
+
+    if app_class_override == "auto":
+        app_class = classify_app(report)
+    else:
+        app_class = app_class_override
     _logger.info("classified %s as %s", report.app_name, app_class)
 
+    saved_searches = [
+        o for o in report.objects if o.object_type == "savedsearch" and o.raw_definition
+    ]
     macros = _macros_dict(report.objects)
+
     proposed: dict[str, GeneratedDescription] = {}
     rubrics: dict[str, QualityRubric] = {}
 
-    for obj in report.objects:
-        if obj.object_type != "savedsearch":
-            continue
-        if not obj.raw_definition:
-            continue
+    total = len(saved_searches)
+    for i, obj in enumerate(saved_searches, start=1):
+        report_progress(f"Explaining SPL ({i}/{total}): {obj.name}")
         try:
             explanation = await spl.explain(obj.raw_definition, macros, mode=mode)
         except Exception as exc:
@@ -40,6 +57,7 @@ async def audit_app(
             continue
 
         if obj.description_present:
+            report_progress(f"Evaluating quality ({i}/{total}): {obj.name}")
             try:
                 rubrics[obj.name] = await generator.evaluate(
                     description=obj.description_text or "",
@@ -50,6 +68,7 @@ async def audit_app(
             except Exception as exc:
                 _logger.warning("failed to evaluate quality for %s: %s", obj.name, exc)
         else:
+            report_progress(f"Generating description ({i}/{total}): {obj.name}")
             try:
                 proposed[obj.name] = await generator.generate(
                     explanation=explanation,
@@ -60,6 +79,7 @@ async def audit_app(
             except Exception as exc:
                 _logger.warning("failed to generate description for %s: %s", obj.name, exc)
 
+    report_progress("Audit complete.")
     return report, proposed, rubrics
 
 
