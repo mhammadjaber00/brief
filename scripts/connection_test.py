@@ -34,7 +34,7 @@ async def main() -> int:
             await session.initialize()
             tools = await session.list_tools()
             print(f"connected — {len(tools.tools)} tools exposed")
-            for tool in tools.tools[:10]:
+            for tool in tools.tools:
                 print(f"  · {tool.name}")
             result = await session.call_tool("splunk_get_info", arguments={})
             print("\nsplunk_get_info →")
