@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     OLLAMA_HOST=http://127.0.0.1:11434
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates git jq && \
+    apt-get install -y --no-install-recommends curl ca-certificates git jq zstd && \
     curl -fsSL https://ollama.com/install.sh | sh && \
     rm -rf /var/lib/apt/lists/*
 
