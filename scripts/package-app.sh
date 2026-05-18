@@ -47,6 +47,14 @@ if [[ -n "$VENDOR_ARG" ]]; then
     echo "Vendoring brief + deps for host platform (warning: native binaries won't run on a different-arch Splunk) ..."
   fi
   "$REPO/.venv/bin/pip" "${PIP_ARGS[@]}" "$REPO"
+
+  if [[ "$VENDOR_PLATFORM" == "macosx_11_0_x86_64" ]]; then
+    echo "Ad-hoc signing native extensions for macOS Gatekeeper..."
+    SIGNED_COUNT=$(find "$STAGING_APP/bin/lib" \( -name "*.so" -o -name "*.dylib" \) -print0 \
+      | xargs -0 -I {} sh -c 'codesign -s - --force "$1" 2>/dev/null && echo {}' _ {} \
+      | wc -l | tr -d ' ')
+    echo "  signed $SIGNED_COUNT native extension(s)"
+  fi
 fi
 
 find "$STAGING_APP" \( -name "__pycache__" -o -name ".DS_Store" -o -name "*.pyc" -o -name "*.pyo" \) \
