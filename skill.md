@@ -38,6 +38,7 @@ The splunk-sdk-python v3.0.0 release renamed/moved several things from older tut
 3. **`id` is required (non-nullable) on tool, subagent, and output calls.** Enforced by splunk-sdk-python#724. Generate UUIDs explicitly — the SDK will not auto-generate.
 4. **Default `AgentLimits`**: `max_tokens=200000`, `max_steps=100`, `timeout=600s`. Brief's audit sessions can outrun these for large apps — override at agent construction.
 5. **Structured output via `Agent.respond(response_model=…)` auto-retries on schema failure.** Don't wrap it in a try/except that catches `ValidationError` and gives up; let the SDK retry. Only bail after the SDK's own retry exhaustion.
+6. **SDK tool API is `splunklib.ai.registry.ToolRegistry`** with `@registry.tool(name=..., description=...)` as a decorator (not `registry.add()` — older drafts of the spec are wrong about that). Pass tools to the Agent via `ToolSettings(local=LocalToolSettings(allowlist=ToolAllowlist(names=[...])), remote=None)` — the Agent looks up by name through the allowlist, not by a registry handoff. `Agent` also requires `service: splunklib.client.Service` and a concrete model (`AnthropicModel` / `OpenAIModel` / `GoogleModel`). Hosted Models are reached as `PredefinedModel` subtypes only when running inside Splunk Cloud.
 
 ## Critical Splunk pitfalls
 
@@ -93,14 +94,23 @@ from pydantic import BaseModel, Field
 
 class GeneratedDescription(BaseModel):
     description: str = Field(min_length=80, max_length=240)
-    primary_use_case: str
+    primary_use_case: str = Field(max_length=120)
     output_fields: list[str]
     mitre_techniques: list[str] | None = None  # security apps only
     estimated_runtime: Literal["fast", "medium", "slow"]
     suitable_for_agent: bool
+    reasoning: str = Field(max_length=300)
+
+class QualityRubric(BaseModel):
+    quality_score: int = Field(ge=0, le=10)
+    is_tautology: bool
+    specifies_data_source: bool
+    specifies_use_case: bool
+    actionable: bool
+    reasoning: str
 ```
 
-Pass as `response_model=GeneratedDescription` to `Agent.respond()`. The SDK enforces the schema and retries bad outputs.
+`GeneratedDescription` is the new-description contract; `QualityRubric` scores existing descriptions. Hosted Models route through `splunklib.ai`'s structured output (auto-retries bad schemas — don't catch). The Ollama adapter passes `format=Schema.model_json_schema()` to `AsyncClient.chat` and retries up to 3× on `ValidationError`.
 
 ## Description quality rules
 
