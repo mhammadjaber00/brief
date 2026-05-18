@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "title": "Brief — Agent-Readiness Auditor",
+    "id": {
+      "group": null,
+      "name": "brief",
+      "version": "0.1.0"
+    },
+    "author": [
+      {
+        "name": "Mohammad Jaber",
+        "email": "mhammadjaber00@outlook.com",
+        "company": null
+      }
+    ],
+    "releaseDate": "2026-06-07",
+    "description": "Audits installed Splunk apps for AI-agent-readiness. Generates semantic descriptions, agent-readiness scores, and MCP manifests using Foundation-Sec and gpt-oss-20b via Splunk Hosted Models.",
+    "classification": {
+      "intendedAudience": "Developers, Administrators",
+      "categories": ["AI/ML", "Utilities", "Developer Tools"],
+      "developmentStatus": "Beta"
+    },
+    "commonInformationModels": {},
+    "license": {
+      "name": "Apache-2.0",
+      "text": null,
+      "uri": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "privacyPolicy": {
+      "name": null,
+      "text": null,
+      "uri": null
+    },
+    "releaseNotes": {
+      "name": null,
+      "text": "Initial hackathon release. CLI deployment shape proven; Splunk-app shape in beta. SAIA cloud tenant + Hosted Models stubs in place — orchestrator falls back to Ollama when Cloud isn't reachable.",
+      "uri": null
+    }
+  },
+  "dependencies": null,
+  "tasks": [],
+  "inputGroups": {},
+  "incompatibleApps": {},
+  "platformRequirements": {
+    "splunk": {
+      "Enterprise": "9.0+",
+      "CloudPlatform": "*"
+    }
+  },
+  "supportedDeployments": ["_standalone", "_search_head_clustering"],
+  "targetWorkloads": ["_search_heads"]
+}

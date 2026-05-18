@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "title": "TA-Osquery",
+    "id": {
+      "group": null,
+      "name": "TA-OSqueryv1",
+      "version": "1.0.4"
+    },
+    "author": [
+      {
+        "name": "Jose Hernandez",
+        "email": "",
+        "company": ""
+      }
+    ],
+    "releaseDate": null,
+    "description": "Ingests osquery data, parses, makes it CIM compliant and populates the Alert, Changes and Endpoint datamodels among other things",
+    "classification": {
+      "intendedAudience": null,
+      "categories": [],
+      "developmentStatus": null
+    },
+    "commonInformationModels": null,
+    "license": {
+      "name": "Apache-2.0",
+      "text": "LICENSE.txt",
+      "uri": "http://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "privacyPolicy": {
+      "name": "Privacy Policy",
+      "text": "PRIVACY.md",
+      "uri": ""
+    },
+    "releaseNotes": null
+  },
+  "dependencies": null,
+  "tasks": [],
+  "inputGroups": {},
+  "incompatibleApps": {},
+  "supportedDeployments": [
+    "_standalone",
+    "_distributed"
+  ],
+  "targetWorkloads": [
+    "_search_heads",
+    "_indexers",
+    "_forwarders"
+  ]
+}
