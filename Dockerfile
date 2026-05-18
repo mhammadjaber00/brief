@@ -23,7 +23,7 @@ RUN mkdir -p "$OLLAMA_MODELS" && \
         curl -sf http://127.0.0.1:11434/api/tags > /dev/null && break; \
         sleep 1; \
     done && \
-    ollama pull llama3.1:8b && \
+    ollama pull gpt-oss:20b && \
     echo "=== ollama list after pull ===" && \
     ollama list && \
     pkill -f "ollama serve" || true

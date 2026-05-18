@@ -23,9 +23,9 @@ The canonical spec lives at [docs/brief-spec.html](docs/brief-spec.html). Read �
 | splunk-sdk | 3.0.0 | Install as `splunk-sdk[ai]==3.0.0` — `[ai]` extras pulls in `mcp`, `langchain`, `pydantic`, `httpx`. **PyPI name is `splunk-sdk`** (the GitHub repo is `splunk-sdk-python`, hence the PR numbers below). |
 | Splunk MCP Server | 1.1.2 | Splunkbase app 7931 |
 | Splunk AI Assistant for SPL | ≥1.4.0 | Exposes `saia_explain_spl` as MCP tool |
-| Hosted Models | Foundation-Sec-1.1-8B-Instruct (security apps), gpt-oss-20b (general apps) | Cloud-only |
+| Hosted Models | Foundation-Sec-1.1-8B-Instruct (security apps), gpt-oss-20b (general apps) | Reachable via Splunk Cloud-Connected SAIA (paid tier) OR via local Ollama using the open-weight versions (Foundation-Sec at `fdtn-ai/Foundation-Sec-1.1-8B-Instruct` on HF, gpt-oss-20b at `ollama.com/library/gpt-oss:20b`). |
 | AppInspect | latest | Safety validation |
-| Ollama (local fallback) | `llama3.1:8b` | Offline modes only. The Ollama registry has no `:8b-instruct` tag — `llama3.1:8b` IS the instruct variant. |
+| Local Ollama models | `gpt-oss:20b` (default for both classes; in Ollama library), `foundation-sec:8b` (security preferred; created via `scripts/install-foundation-sec.sh` from the public HF safetensors) | Auto-routed by `brief.generator.local._model_for(app_class)`. Override via `BRIEF_MODEL_SECURITY` / `BRIEF_MODEL_GENERAL`. |
 
 Choose Foundation-Sec when the app's CIM data models or sourcetypes indicate security telemetry (auth, endpoint, network traffic, threat intel). Default to gpt-oss-20b otherwise. The scanner emits an `app_category` signal — use it to route.
 

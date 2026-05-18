@@ -58,9 +58,34 @@ Brief reads configuration from environment variables (and a local `.env` file if
 | `SPLUNK_CLOUD_HOST` | Splunk Cloud host for Hosted Models (live mode) — leave blank for offline |
 | `SPLUNK_CLOUD_TOKEN` | Splunk Cloud token for Hosted Models |
 | `OLLAMA_HOST` | Ollama daemon URL (default `http://localhost:11434`) |
-| `OLLAMA_MODEL` | Ollama model tag (default `llama3.1:8b`) |
+| `OLLAMA_MODEL` | Override the model for both classes (rarely set; prefer per-class envs below) |
+| `BRIEF_MODEL_SECURITY` | Ollama model tag for security-classified apps (default `gpt-oss:20b`; recommended `foundation-sec:8b`) |
+| `BRIEF_MODEL_GENERAL` | Ollama model tag for general apps (default `gpt-oss:20b`) |
 
 Tokens are wrapped in Pydantic's `SecretStr` and never appear in logs or `repr()`.
+
+## Splunk Hosted Models
+
+Brief routes saved searches to one of the two Splunk Hosted Models depending on the app classifier's verdict:
+
+| App class | Model | Source |
+|---|---|---|
+| security | **Foundation-Sec-1.1-8B-Instruct** | [`fdtn-ai/Foundation-Sec-1.1-8B-Instruct`](https://huggingface.co/fdtn-ai/Foundation-Sec-1.1-8B-Instruct) |
+| general | **gpt-oss-20b** | Ollama Library (`gpt-oss:20b`) |
+
+Both are reached two ways: via **Splunk Cloud-Connected SAIA** when the tenant tier allows, or via **local Ollama** with the open-weight models. Brief tries Cloud-Connected first in `--mode live`, falls back to local Ollama, and falls back again to `gpt-oss:20b` if Foundation-Sec isn't installed.
+
+### Set up Foundation-Sec locally (optional)
+
+The Foundation-Sec weights aren't on Ollama's default library yet. One-time setup downloads the safetensors from HuggingFace and registers them with Ollama:
+
+```bash
+scripts/install-foundation-sec.sh
+```
+
+~16GB download + ~5GB conversion. After this, `BRIEF_MODEL_SECURITY` automatically resolves to `foundation-sec:8b` and Brief uses it for any app the classifier tags as security.
+
+Without this step, Brief uses `gpt-oss:20b` for both classes — still a Splunk Hosted Model, just not the security-fine-tuned one.
 
 ## Project layout
 

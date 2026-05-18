@@ -10,7 +10,8 @@ from brief.generator.prompts import EVALUATE_QUALITY_PROMPT, GENERATE_DESCRIPTIO
 from brief.generator.schema import GeneratedDescription, QualityRubric
 from brief.spl.models import SPLExplanation
 
-_DEFAULT_MODEL = "llama3.1:8b"
+_DEFAULT_MODEL_SECURITY = "gpt-oss:20b"
+_DEFAULT_MODEL_GENERAL = "gpt-oss:20b"
 _DEFAULT_HOST = "http://localhost:11434"
 _MAX_ATTEMPTS = 3
 
@@ -23,8 +24,19 @@ def _client() -> AsyncClient:
     return AsyncClient(host=os.environ.get("OLLAMA_HOST", _DEFAULT_HOST))
 
 
-def _model() -> str:
-    return os.environ.get("OLLAMA_MODEL", _DEFAULT_MODEL)
+def _model_for(app_class: str) -> str:
+    override = os.environ.get("OLLAMA_MODEL")
+    if override:
+        return override
+    if app_class == "security":
+        return (
+            os.environ.get("BRIEF_MODEL_SECURITY")
+            or _DEFAULT_MODEL_SECURITY
+        )
+    return (
+        os.environ.get("BRIEF_MODEL_GENERAL")
+        or _DEFAULT_MODEL_GENERAL
+    )
 
 
 def _serialize_explanation(explanation: SPLExplanation) -> str:
@@ -45,6 +57,7 @@ async def generate_description_local(
         system_prompt=GENERATE_DESCRIPTION_PROMPT,
         user_message=user_message,
         schema=GeneratedDescription,
+        model=_model_for(app_class),
     )
 
 
@@ -62,6 +75,7 @@ async def evaluate_quality_local(
         system_prompt=EVALUATE_QUALITY_PROMPT,
         user_message=user_message,
         schema=QualityRubric,
+        model=_model_for(app_class),
     )
 
 
@@ -69,12 +83,13 @@ async def _generate_with_retry(
     system_prompt: str,
     user_message: str,
     schema: type[GeneratedDescription] | type[QualityRubric],
+    model: str,
 ):
     client = _client()
     last_error: Exception | None = None
     for attempt in range(_MAX_ATTEMPTS):
         response = await client.chat(
-            model=_model(),
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},

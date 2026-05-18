@@ -24,11 +24,16 @@ Items the spec calls for that are intentionally not done yet. Each entry lists w
 
 ## Step 04 — generation + agent
 
-### Hosted Models adapter (Foundation-Sec-1.1-8B-Instruct, gpt-oss-20b)
-- **Status:** `src/brief/generator/hosted.py` stubs raise `HostedModelsUnavailable`.
-- **Why deferred:** Hosted Models are Splunk Cloud only; SAIA cloud tenant not provisioned.
-- **Unblocks:** Cloud tenant active + Hosted Models endpoint reachable.
-- **Fallback in place:** `brief.generator.generate(mode="live")` catches `HostedModelsUnavailable` and falls back to Ollama. Tests cover this.
+### Hosted Models via Cloud-Connected SAIA endpoint
+- **Status:** `src/brief/generator/hosted.py` stubs raise `HostedModelsUnavailable`. The Cloud-Connected SAIA endpoint is **paid-tier gated** on Splunk Cloud — Cloud Free Trial cannot provision a Cloud-Connected tenant (confirmed via the "Tenant code cannot be generated, This operation is not supported in cloud stack" error on the setup form).
+- **What works instead:** the same Hosted Models are reachable via **local Ollama** using their open-weight versions: `gpt-oss:20b` (from Ollama Library) and `foundation-sec:8b` (created via `scripts/install-foundation-sec.sh` from the public `fdtn-ai/Foundation-Sec-1.1-8B-Instruct` HF safetensors). `brief.generator.local._model_for(app_class)` routes accordingly.
+- **What's still deferred:** the Cloud-Connected endpoint adapter itself. Wire-up is straightforward when a paid Cloud tenant is available.
+- **Unblocks:** Splunk Cloud paid tier with Cloud-Connected enabled, then implement the `splunklib.ai`-based hosted call in `generator/hosted.py`.
+
+### SAIA `saia_explain_spl` for Stage 2
+- **Status:** MCP wire-up confirmed (server identifies as `Splunk_MCP_Server v1.1.2`, token auth works, tool registers). Runtime call returns "Service not initialized, please contact support."
+- **Why deferred:** same paid-tier gate — `saia_explain_spl` is backed by the Cloud-Connected service.
+- **Fallback in place:** `brief.spl.explain(mode="live")` catches `SaiaExplanationError` and falls back to Ollama. Pipeline runs end-to-end either way.
 
 ### splunklib.ai.Agent end-to-end runtime verification
 - **Status:** `build_brief_agent()` (in `src/brief/agent.py`) constructs the real Agent with the correct SDK shape — `ToolRegistry` with `@registry.tool` decorator, `ToolAllowlist` allowlist, `ToolSettings`, `AnthropicModel`, `AgentLimits`, `splunklib.client.connect` for the `service`. Construction not exercised at runtime.
