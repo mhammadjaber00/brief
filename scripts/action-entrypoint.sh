@@ -36,6 +36,8 @@ if [[ "$MODE" == "offline" ]] || [[ "$MODE" == "live" ]]; then
         fi
         sleep 1
     done
+    echo "  models available:"
+    ollama list 2>&1 | sed 's/^/    /'
 fi
 
 if [[ -n "$SPLUNK_MCP_URL_INPUT" ]]; then
