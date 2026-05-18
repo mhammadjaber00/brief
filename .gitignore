@@ -227,3 +227,6 @@ brief-out/
 .DS_Store
 .idea/
 .vscode/
+
+# Splunk app packaging output
+*.spl

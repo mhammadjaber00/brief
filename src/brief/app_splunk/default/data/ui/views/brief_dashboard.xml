@@ -1,0 +1,75 @@
+<dashboard version="1.1">
+  <label>Brief — Agent-Readiness</label>
+  <description>Per-app agent-readiness scores, updated weekly by the Brief scheduled audit.</description>
+
+  <row>
+    <panel>
+      <title>Overall readiness across installed apps</title>
+      <single>
+        <search>
+          <query>index=brief_scores status=ok earliest=-30d | stats latest(overall_score) as score by app_name | stats round(avg(score)) as overall_readiness</query>
+        </search>
+        <option name="rangeColors">["0xa32d2d","0xb5731e","0x4f6b5c"]</option>
+        <option name="rangeValues">[40,75]</option>
+        <option name="unit">/100</option>
+        <option name="useColors">1</option>
+        <option name="numberPrecision">0</option>
+        <option name="trendDisplayMode">absolute</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>App ranking</title>
+      <table>
+        <search>
+          <query>index=brief_scores status=ok earliest=-30d | stats latest(overall_score) as score, latest(presence_pct) as presence, latest(quality_avg) as quality, latest(coverage_pct) as coverage, latest(safety_pct) as safety, latest(proposed_count) as proposals by app_name | sort -score | rename app_name as "App", score as "Score", presence as "Presence", quality as "Quality", coverage as "Coverage", safety as "Safety", proposals as "Proposed descriptions"</query>
+        </search>
+        <option name="count">25</option>
+        <option name="drilldown">cell</option>
+        <drilldown>
+          <link target="_self">/app/brief/brief_app_detail?form.app_name=$row.App$</link>
+        </drilldown>
+      </table>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Worst 5 performers</title>
+      <table>
+        <search>
+          <query>index=brief_scores status=ok earliest=-30d | stats latest(overall_score) as score, latest(presence_pct) as presence, latest(quality_avg) as quality, latest(safety_pct) as safety by app_name | sort score | head 5 | rename app_name as "App", score as "Score", presence as "Presence", quality as "Quality", safety as "Safety"</query>
+        </search>
+      </table>
+    </panel>
+
+    <panel>
+      <title>Subscore contribution per app</title>
+      <chart>
+        <search>
+          <query>index=brief_scores status=ok earliest=-30d | stats latest(presence_pct) as Presence, latest(quality_avg) as Quality, latest(coverage_pct) as Coverage, latest(safety_pct) as Safety by app_name | sort -Presence | head 20</query>
+        </search>
+        <option name="charting.chart">bar</option>
+        <option name="charting.chart.stackMode">stacked100</option>
+        <option name="charting.axisTitleX.text">Subscore contribution</option>
+        <option name="charting.axisTitleY.text">App</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Overall readiness over time (90d)</title>
+      <chart>
+        <search>
+          <query>index=brief_scores status=ok earliest=-90d | bin _time span=1d | stats avg(overall_score) as readiness by _time | timechart span=1d avg(readiness) as "Overall readiness"</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.axisTitleY.text">Readiness / 100</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+      </chart>
+    </panel>
+  </row>
+</dashboard>

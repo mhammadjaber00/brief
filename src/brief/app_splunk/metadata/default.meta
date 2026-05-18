@@ -1,0 +1,15 @@
+[]
+access = read : [ user ], write : [ admin, sc_admin ]
+export = system
+
+[views]
+access = read : [ user ], write : [ admin, sc_admin ]
+export = system
+
+[savedsearches]
+access = read : [ user ], write : [ admin, sc_admin ]
+export = system
+
+[commands]
+access = read : [ user ], write : [ admin, sc_admin ]
+export = system

@@ -1,0 +1,76 @@
+<form version="1.1">
+  <label>Brief — App detail</label>
+  <description>Per-app drill-down: subscores, proposed descriptions, and safety findings from the most recent audit run.</description>
+
+  <fieldset submitButton="false">
+    <input type="dropdown" token="app_name" searchWhenChanged="true">
+      <label>App</label>
+      <search>
+        <query>index=brief_scores status=ok earliest=-30d | stats latest(_time) as _time by app_name | sort -_time</query>
+      </search>
+      <fieldForLabel>app_name</fieldForLabel>
+      <fieldForValue>app_name</fieldForValue>
+      <default>brief</default>
+    </input>
+  </fieldset>
+
+  <row>
+    <panel>
+      <title>Overall score</title>
+      <single>
+        <search>
+          <query>index=brief_scores status=ok app_name="$app_name$" earliest=-30d | stats latest(overall_score) as score</query>
+        </search>
+        <option name="unit">/100</option>
+        <option name="rangeColors">["0xa32d2d","0xb5731e","0x4f6b5c"]</option>
+        <option name="rangeValues">[40,75]</option>
+        <option name="useColors">1</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Presence</title>
+      <single>
+        <search><query>index=brief_scores status=ok app_name="$app_name$" earliest=-30d | stats latest(presence_pct) as v</query></search>
+        <option name="unit">/100</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Quality</title>
+      <single>
+        <search><query>index=brief_scores status=ok app_name="$app_name$" earliest=-30d | stats latest(quality_avg) as v</query></search>
+        <option name="unit">/100</option>
+      </single>
+    </panel>
+    <panel>
+      <title>Safety</title>
+      <single>
+        <search><query>index=brief_scores status=ok app_name="$app_name$" earliest=-30d | stats latest(safety_pct) as v</query></search>
+        <option name="unit">/100</option>
+      </single>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Audit history</title>
+      <chart>
+        <search>
+          <query>index=brief_scores status=ok app_name="$app_name$" earliest=-90d | timechart span=1d avg(overall_score) as "Score"</query>
+        </search>
+        <option name="charting.chart">line</option>
+        <option name="charting.axisTitleY.text">Score / 100</option>
+      </chart>
+    </panel>
+  </row>
+
+  <row>
+    <panel>
+      <title>Proposed descriptions and existing rubrics</title>
+      <table>
+        <search>
+          <query>index=brief_scores status=ok app_name="$app_name$" earliest=-30d | stats latest(proposed_count) as Proposed, latest(rubric_count) as "Rubric scores", latest(described_count) as Described, latest(total_objects) as "Total objects" by _time | sort -_time | head 5 | rename _time as "Last audit"</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</form>

@@ -1,0 +1,5 @@
+<nav search_view="search" color="#B5731E">
+  <view name="brief_dashboard" default="true" label="Readiness"/>
+  <view name="brief_app_detail" label="App detail"/>
+  <view name="search" label="Search"/>
+</nav>
