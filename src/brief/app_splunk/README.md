@@ -1,6 +1,8 @@
 # Brief — Agent-Readiness Auditor (Splunk app)
 
-Brief packaged as a Splunk app. Runs on Splunk Enterprise 9.0+ and Splunk Cloud Platform. Installs a weekly scheduled audit and a dashboard that scores every other app on your deployment.
+Brief packaged as a Splunk app. **Target runtime: Splunk Cloud or Linux Splunk Enterprise.** Installs a weekly scheduled audit and a dashboard that scores every other app on your deployment.
+
+> **macOS Apple Silicon developers:** local Splunk Enterprise on Apple Silicon runs under Rosetta with library validation enforced — vendored native extensions (`pydantic_core`, `lxml`, etc.) get rejected at `dlopen` with "Team ID mismatch." Use the **CLI shape** (`brief audit <path>`) for local Mac testing; the Splunk-app shape targets Linux deployments.
 
 ## What it does
 
@@ -13,17 +15,27 @@ The **Readiness** dashboard then shows:
 - Subscore contribution per app (presence / quality / coverage / safety)
 - 90-day trend line
 
+## Build the `.spl` for your target
+
+```bash
+# Splunk Cloud / on-prem Linux Splunk Enterprise (recommended target)
+scripts/package-app.sh --vendor=linux
+
+# Local macOS Splunk on Apple Silicon (won't work — see top note)
+scripts/package-app.sh --vendor=macos
+```
+
 ## Install
 
-1. Upload the `brief-app-0.1.0.spl` file via **Apps → Manage Apps → Install app from file**.
+1. Upload `brief-app-0.1.0.spl` via **Apps → Manage Apps → Install app from file**.
 2. Restart Splunk when prompted.
 3. Configure the service account — see RBAC below.
 4. Open **Apps → Brief — Agent-Readiness Auditor**. The dashboard will be empty until the first audit runs (Sundays 03:00) or you trigger it manually.
 
-To trigger immediately:
+To trigger immediately and write to the index:
 
 ```spl
-| briefaudit mode=live
+| briefaudit mode=live | collect index=brief_scores marker="brief_audit"
 ```
 
 ## Required RBAC

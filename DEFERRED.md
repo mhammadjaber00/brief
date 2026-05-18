@@ -38,15 +38,15 @@ Items the spec calls for that are intentionally not done yet. Each entry lists w
 
 ## Step 07 — Splunk app deployment shape
 
-### Install + dashboard render on local Splunk Enterprise
-- **Status:** `brief-app-0.1.0.spl` packages cleanly. AppInspect: 0 errors, 0 failures, 0 future-failures, 3 warnings, 108 successes against the staging dir.
-- **Why deferred:** requires running Splunk Enterprise with ≥3 other apps installed for the dashboard panels to populate. Manual step on your side.
-- **Unblocks:** install the .spl on local Splunk → confirm the **Brief — Agent-Readiness** app appears under Apps → open the dashboard → trigger `| briefaudit limit=1` once to seed the `brief_scores` index.
+### Splunk-app runtime verification on Splunk Cloud
+- **Status:** `brief-app-0.1.0.spl` packages cleanly with `scripts/package-app.sh --vendor=linux` (24MB, manylinux2014_x86_64 wheels). AppInspect: 0 errors, 0 failures, 0 future-failures, 3 warnings, 108 successes against the staging dir. Dashboard XML, saved searches, and the `| briefaudit | collect index=brief_scores` flow are all wired.
+- **Why deferred:** Splunk Cloud trial provisioning is still pending (see top of this file). Live runtime verification (install → trigger audit → confirm dashboard populates) waits for the Cloud tenant.
+- **Unblocks:** Cloud trial activates → upload `brief-app-0.1.0.spl` via Cloud's app manager → grant `brief_agent` the `sc_admin` + `mcp_tool_admin` capability → run `| briefaudit mode=live limit=3 | collect index=brief_scores marker="brief_audit"` once → open the Readiness dashboard.
 
-### Vendored dependencies for self-contained .spl
-- **Status:** `scripts/package-app.sh` supports `--vendor` to bundle `brief` + its dependencies into `bin/lib/` for the custom search command. Default is structure-only (small .spl, requires `splunk cmd python -m pip install brief` post-install).
-- **Why deferred:** vendored deps need to target Splunk's bundled Python (Linux x86_64). Building on macOS produces native binaries that don't run on Linux Splunk. Needs a cross-platform build (manylinux wheels via `--platform`) for a portable .spl.
-- **Fallback in place:** the structure-only .spl is sufficient for AppInspect validation + Splunkbase upload shape. Functional verification needs the post-install pip step or a vendored build.
+### Won't-do: local Splunk Enterprise on Apple Silicon
+- **Status:** confirmed incompatible. Splunk on macOS arm64 runs under Rosetta as x86_64 Python with hardened-runtime + library validation. Vendored native extensions (`pydantic_core`, `lxml`, `cryptography`, etc.) get rejected at `dlopen` with "Team ID mismatch" — even after ad-hoc signing — because the Splunk Python binary has a real Team ID and macOS refuses to load no-Team-ID libraries into it.
+- **Why won't-do:** the only workarounds modify Splunk's Python binary (`codesign -fs - /Applications/Splunk/bin/python3`) and risk breaking on Splunk's auto-update. Not worth pursuing for a hackathon when Splunk Cloud (the real target) has no such restriction.
+- **For local Brief demo on Mac:** use the CLI (`brief audit tests/fixtures/sample-ta-1`). It produces identical artifacts to what the Splunk-app shape would emit. Same HTML report, same MCP manifest, same diff.
 
 ## Step 09 — submission
 

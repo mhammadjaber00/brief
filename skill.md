@@ -48,6 +48,7 @@ The splunk-sdk-python v3.0.0 release renamed/moved several things from older tut
 4. **Roles**: `mcp_user` with `mcp_tool_execute` is the minimum runtime role. Brief itself, doing cross-app enumeration in the Splunk app deployment shape, needs `sc_admin` with `mcp_tool_admin`.
 5. **Agent must NOT run as the system user.** splunk-sdk-python#753 forbids it. Create a dedicated user (e.g., `brief_agent`) before deploying.
 6. **Splunk Hosted Models are Cloud-only.** They cannot be reached from offline development. Use the Ollama adapter for CLI and GitHub Action modes; Hosted Models are reached only when Brief runs as a Splunk app inside Splunk Cloud.
+7. **Splunk on macOS Apple Silicon is a dev dead-end for the Splunk-app shape.** Splunk runs through Rosetta as x86_64 Python with hardened-runtime + library validation enabled. Vendored native extensions (`pydantic_core`, `lxml`, `cryptography`, etc.) get rejected at `dlopen` with "Team ID mismatch" — even after ad-hoc signing — because Splunk's Python has a real Team ID and macOS won't load no-Team-ID libraries into it. Workarounds modify Splunk's binary and break on updates. **For local Mac dev, use the CLI shape.** Splunk-app shape targets `--vendor=linux` (Splunk Cloud, on-prem Linux Splunk).
 
 ## File structure
 
