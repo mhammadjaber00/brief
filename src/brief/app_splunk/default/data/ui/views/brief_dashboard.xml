@@ -7,7 +7,7 @@
       <title>Overall readiness across installed apps</title>
       <single>
         <search>
-          <query>index=brief_scores status=ok earliest=-30d | stats latest(overall_score) as score by app_name | stats round(avg(score)) as overall_readiness</query>
+          <query>index=brief_scores status=ok earliest=-30d | stats latest(overall_score) as score by app_name | stats avg(score) as overall_readiness | eval overall_readiness=round(overall_readiness)</query>
         </search>
         <option name="rangeColors">["0xa32d2d","0xb5731e","0x4f6b5c"]</option>
         <option name="rangeValues">[40,75]</option>
@@ -64,7 +64,7 @@
       <title>Overall readiness over time (90d)</title>
       <chart>
         <search>
-          <query>index=brief_scores status=ok earliest=-90d | bin _time span=1d | stats avg(overall_score) as readiness by _time | timechart span=1d avg(readiness) as "Overall readiness"</query>
+          <query>index=brief_scores status=ok earliest=-90d | timechart span=1d avg(overall_score) as "Overall readiness"</query>
         </search>
         <option name="charting.chart">line</option>
         <option name="charting.axisTitleY.text">Readiness / 100</option>
