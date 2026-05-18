@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 01 — Foundations &amp; the master skill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="brief-spec.html">← Brief spec</a>
+  <div class="center">Step 01 of 09</div>
+  <a href="step-2.html">Step 02 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 1 · Days 1–3 · May 18–20, 2026</div>
+  <h1 class="display">Step One<span class="period">.</span></h1>
+  <p class="subtitle">Foundations and the master skill — the only step you do without writing application code.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>Day zero. Nothing exists yet. The hackathon kicked off this morning. Twenty-eight days remain until submission close on June 15, 2026, 09:00 PDT.</p>
+  <p>Step 01 has four jobs: secure the Splunk accounts you'll need (some are time-clock-sensitive), prepare your local development environment, bootstrap the GitHub repo with the artifacts the hackathon rules require, and write the master skill document — a single text file your AI coding agent will read at the start of every subsequent session, so you stop re-explaining the project from scratch.</p>
+  <p>No application code gets written today. Setup discipline now pays back compounded later.</p>
+</section>
+
+<section>
+  <div class="section-num">§ A — Account setup</div>
+  <h2>Provisioning.</h2>
+
+  <div class="callout">
+    <div class="callout-label">Time-clock warning</div>
+    The Splunk Enterprise 60-day trial expires July 17 — winners-announcement day. You must apply for the Splunk Developer License within the first 7 days to extend access to 6 months. The Splunk Cloud trial is separate and equally urgent: Hosted Models (required for Foundation-Sec) are Cloud-only, and provisioning can take 24–48 hours. Submit both applications on Day 1.
+  </div>
+
+  <ul class="tasks">
+    <li><strong>Splunk Enterprise trial.</strong> Download from <a href="https://www.splunk.com/en_us/download/splunk-enterprise.html" target="_blank" rel="noopener">splunk.com/download</a>. Install locally for offline development against a real Splunk instance. Note the trial expires July 17 — see Developer License below.</li>
+    <li><strong>Splunk Developer License application.</strong> Apply at <a href="https://dev.splunk.com/enterprise/page/dev-license-application/" target="_blank" rel="noopener">dev.splunk.com/enterprise</a> within the first 7 days. Extends Enterprise from 60 days to 6 months — essential because the trial expires on winners-announcement day.</li>
+    <li><strong>Splunk Cloud trial.</strong> Register at <a href="https://www.splunk.com/en_us/download/splunk-cloud-platform.html" target="_blank" rel="noopener">splunk.com/cloud-trial</a>. Required for accessing Splunk Hosted Models (Foundation-Sec-1.1-8B-Instruct, gpt-oss-20b). Provisioning can take 24–48 hours so do it Day 1.</li>
+    <li><strong>Splunkbase developer account.</strong> Register at <a href="https://splunkbase.splunk.com/" target="_blank" rel="noopener">splunkbase.splunk.com</a>. Required for downloading the Splunk MCP Server (app 7931) and target apps to audit.</li>
+    <li><strong>Devpost team registration.</strong> Confirm participation at the <a href="https://splunk-agentic-ops.devpost.com/" target="_blank" rel="noopener">hackathon page</a>. Solo team is fine. Lebanon eligibility verified — country is not on the OFAC exclusion list (Cuba, Iran, North Korea, Crimea, Russia, Belarus, Brazil, Quebec, Donetsk/Luhansk).</li>
+    <li><strong>Wise USD account.</strong> Beirut banking is hostile to USD transfers; Wise is the cleanest path for receiving prize money. Set up proactively — verification can take days.</li>
+    <li><strong>W-8BEN form.</strong> Required for non-US prize recipients. Download from the IRS site and prepare the fields offline; you'll submit on award.</li>
+    <li><strong>GitHub repo.</strong> Create <code>github.com/&lt;you&gt;/brief</code>. Public visibility, Apache 2.0 license file (hackathon requires a detectable OSI license), <code>.gitignore</code> for Python, empty <code>README.md</code>, empty <code>architecture_diagram.png</code> placeholder at repo root (the rules require this exact filename).</li>
+  </ul>
+</section>
+
+<div class="ornament">✦</div>
+
+<section>
+  <div class="section-num">§ B — Local environment</div>
+  <h2>The dev box.</h2>
+
+  <ul class="tasks">
+    <li><strong>Python 3.13.</strong> Required by <code>splunk-sdk-python</code> v3.0.0. Install via <code>pyenv</code> or your platform's installer. Verify with <code>python --version</code>.</li>
+    <li><strong>Project skeleton.</strong> Create <code>pyproject.toml</code> with Python 3.13 requirement, Apache 2.0 license metadata, and the dependency list. See structure below.</li>
+    <li><strong>splunk-sdk-python v3.0.0.</strong> Install with <code>pip install splunk-sdk-python==3.0.0</code>. Verify <code>splunklib.ai</code> imports cleanly — if it doesn't, you're on an older SDK.</li>
+    <li><strong>Splunk MCP Server v1.1.2.</strong> Download from <a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">Splunkbase app 7931</a>. Install on your local Splunk Enterprise instance. Generate a bearer token <em>from inside the MCP Server app</em> — the legacy Settings → Tokens path was deprecated in v1.0.0 and won't work.</li>
+    <li><strong>MCP user role.</strong> Create a dedicated non-system user with the <code>mcp_user</code> role and <code>mcp_tool_execute</code> capability. <code>splunklib.ai</code> PR #753 explicitly forbids running agents as the system user.</li>
+    <li><strong>Ollama (local LLM fallback).</strong> Install from <a href="https://ollama.com/" target="_blank" rel="noopener">ollama.com</a>. Pull <code>llama3.1:8b-instruct</code>. This is your offline fallback for CLI and GitHub Action modes since Hosted Models are Splunk Cloud-only.</li>
+    <li><strong>Test the connection.</strong> Write a 20-line script that authenticates to your local Splunk via the MCP Server, calls <code>splunk_get_info</code>, and prints the response. If this fails, fix it now — every subsequent step depends on this working.</li>
+  </ul>
+
+  <h3>Initial repo structure</h3>
+  <pre><code>brief/
+├── pyproject.toml
+├── README.md
+├── LICENSE                         # Apache 2.0
+├── architecture_diagram.png        # Placeholder; finalize in Step 09
+├── .gitignore
+├── docs/
+│   ├── brief-spec.html             # The spec (copy from outputs)
+│   ├── brief.css
+│   └── step-*.html                 # The build plan
+├── skill.md                        # The Master Skill (from § C below)
+├── src/brief/
+│   └── __init__.py                 # Empty for now
+└── tests/
+    └── fixtures/                   # Sample apps land here in Step 02</code></pre>
+</section>
+
+<div class="ornament">✦</div>
+
+<section>
+  <div class="section-num">§ C — The Master Skill</div>
+  <h2>The single document your AI agent reads first.</h2>
+
+  <p>Save the block below as <code>skill.md</code> at the root of your repo. At the start of every AI coding session — whether you're using Claude Code, Cursor, or any other assistant — paste this file into the context first. It encodes everything an agent needs to write code that fits the project: tech stack, version-pinned dependencies, the SDK's two breaking-change gotchas, the Splunk platform's RBAC and Cloud-only constraints, file structure conventions, code style, output conventions, and the timeline pressure.</p>
+
+  <p>Update this skill whenever a new constraint surfaces during the build. Versioned in git, it's the agent's persistent memory across sessions.</p>
+
+  <div class="skill-box">
+    <div class="skill-label">skill.md — paste into AI coding agent context at session start</div>
+    <div class="skill-body"># Brief — Master Skill
+
+## Project context
+
+You are helping build **Brief**, an AI agent that audits Splunk apps for AI-agent-readiness. It scans `.conf` metadata, uses the Splunk AI Assistant for SPL to understand each saved search, generates rich semantic descriptions with Foundation-Sec or gpt-oss-20b, and emits three artifacts: an agent-readiness score, a unified-diff PR, and an MCP manifest.
+
+The full spec is in `docs/brief-spec.html`. Read §03 (pipeline) and §06 (Splunk AI stack) before writing any agent code.
+
+This is a hackathon submission. Deadline: **June 15, 2026, 09:00 PDT** (submit by EOD June 14). Track: **Platform &amp; Developer Experience**. Bonus targets: Best Use of Developer Tools, MCP Server, and Hosted Models (stackable).
+
+## Tech stack — pinned versions
+
+- Python **3.13** — required by splunk-sdk-python v3.0.0
+- `splunk-sdk-python` **3.0.0** — released May 12, 2026
+- Splunk MCP Server **v1.1.2** — Splunkbase app 7931
+- Splunk Hosted Models: **Foundation-Sec-1.1-8B-Instruct** (security apps), **gpt-oss-20b** (general apps)
+- Splunk AI Assistant for SPL **v1.4.0+** — exposes `saia_explain_spl` as MCP tool
+- AppInspect — for safety validation
+- Local fallback: **Ollama** with `llama3.1:8b-instruct` for offline modes
+
+## Critical SDK pitfalls — get these wrong, agent loops break silently
+
+1. Agent state is `Agent.messages`, **not** `Agent.response`. Renamed in PR #743. Older tutorials show `.response` — those are wrong for v3.0.0.
+2. Token/step/timeout middleware lives in `splunklib.ai.limits`, **not** `splunklib.ai.hooks`. Moved in PR #759. Importing from `.hooks` will fail.
+3. `id` is required (non-nullable) for tool, subagent, and output calls. PR #724. Generate UUIDs explicitly.
+4. Default AgentLimits: max_tokens=200000, max_steps=100, timeout=600s. Override for Brief's longer audit sessions if needed.
+5. Structured output uses Pydantic models passed to `Agent.respond()` — schema enforcement is automatic but bad outputs auto-retry; don't catch retries as errors.
+
+## Critical Splunk pitfalls
+
+1. MCP Server bearer tokens must be generated **from inside the MCP Server app**. The legacy Settings → Tokens path was deprecated in v1.0.0 — tokens from there will be rejected.
+2. **Do not use OAuth 2.1.** It's a closed Cloud-only preview, requires Twix 10.3.2512.X, and needs ~1 week of Splunk Identity Service team coordination. Static encrypted bearer tokens are the supported hackathon path.
+3. MCP guardrails for `splunk_run_query`: ≤60s runtime, ≤1000 events, no destructive SPL (no `| delete`, `| outputlookup` to destructive paths, etc.). Brief's safety analyzer enforces these statically before any search is flagged as agent-callable.
+4. Required MCP role: `mcp_user` with `mcp_tool_execute` capability. For Brief's Splunk app deployment shape doing cross-app enumeration: `sc_admin` with `mcp_tool_admin`.
+5. The agent must NOT run as the system user — PR #753 explicitly forbids this. Create a dedicated user.
+6. **Splunk Hosted Models are Cloud-only.** They cannot be reached from offline development. CLI and GitHub Action modes use the local Ollama adapter. Live mode (Brief running inside Splunk Cloud as a Splunk app) uses Hosted Models.
+
+## File structure
+
+```
+brief/
+├── pyproject.toml
+├── src/brief/
+│   ├── __init__.py
+│   ├── agent.py                  # The splunklib.ai Agent
+│   ├── scanner/                  # Stage 1
+│   │   ├── conf_parser.py
+│   │   ├── xml_parser.py
+│   │   ├── safety.py
+│   │   └── signals.py
+│   ├── spl/                      # Stage 2
+│   │   ├── macro_expander.py
+│   │   └── explainer.py          # saia_explain_spl wrapper
+│   ├── generator/                # Stage 3
+│   │   ├── schema.py             # Pydantic GeneratedDescription
+│   │   ├── hosted.py             # Splunk Hosted Models adapter
+│   │   └── local.py              # Ollama fallback
+│   ├── scoring/                  # Part of Stage 4
+│   │   └── score.py
+│   ├── emit/                     # Stage 4
+│   │   ├── diff.py
+│   │   ├── manifest.py
+│   │   └── report.py
+│   ├── cli.py                    # Entry point (typer)
+│   └── app_splunk/               # Splunk app deployment shape
+├── action.yml                    # GitHub Action manifest
+├── Dockerfile                    # For Action container
+├── tests/fixtures/               # Sample Splunk apps
+├── docs/                         # brief-spec.html + step-*.html
+└── architecture_diagram.png      # Required by hackathon rules
+```
+
+## Code conventions
+
+- Type hints everywhere — Python 3.13 native syntax (`list[str]`, `dict[K, V]`, `X | Y`)
+- Pydantic for cross-module data models; dataclasses for internal-only
+- `pathlib.Path` always; never `os.path` string concatenation
+- `logging` with `structlog` adapter, not `print()`
+- `async` for: agent calls, MCP calls, parallel SPL explanation in batch mode
+- Module size: prefer many small files over one large module
+- Docstrings: every public function. Examples in the docstring where non-obvious.
+
+## Pydantic schema — the generation contract
+
+```python
+class GeneratedDescription(BaseModel):
+    description: str = Field(min_length=80, max_length=240)
+    primary_use_case: str
+    output_fields: list[str]
+    mitre_techniques: list[str] | None = None  # security apps only
+    estimated_runtime: Literal["fast", "medium", "slow"]
+    suitable_for_agent: bool
+```
+
+Foundation-Sec is asked to produce descriptions that:
+- Lead with a verb ("Returns", "Counts", "Detects")
+- Name specific event IDs, sourcetypes, or indexes that appear in the SPL
+- State the canonical use case ("Use for credential stuffing investigations")
+- Include MITRE technique IDs in a separate field, never in prose
+- Avoid hedging ("might", "possibly", "could be useful for")
+
+## Testing approach
+
+- `pytest` for everything
+- 2–3 sample Splunk apps committed to `tests/fixtures/`
+- Mock Splunk Hosted Models with the local Ollama adapter — tests run offline
+- Snapshot test the diff PR outputs so generation changes are reviewable in git
+- Integration test: end-to-end CLI run on a fixture app, assert score &gt; 80%
+
+## Output conventions
+
+- All artifacts go to a configurable `--output` directory
+- Default structure: `report.html`, `score.json`, `descriptions.diff`, `mcp_manifest.yaml`
+- **Never modify input files in place.** Brief proposes via diff; humans approve via PR merge.
+
+## Output: MCP manifest schema
+
+```yaml
+app: TA_security_monitoring
+tools:
+  - name: get_failed_auth_24h
+    saved_search: get_failed_auth_24h
+    description: |
+      Returns count of failed Linux SSH logins (event 4625) by user
+      and source IP in the last 24h. Use for credential stuffing.
+    output_fields: [user, src_ip, count]
+    mitre_techniques: [T1110.001, T1078]
+    rbac_role: mcp_user
+    estimated_runtime: fast
+```
+
+## Hackathon-required artifacts
+
+- Public GitHub repo with detectable OSI license (Apache 2.0 chosen)
+- README with setup instructions and dependency list
+- Demo video &lt; 3 minutes, public on YouTube or Vimeo
+- File at repo root named exactly `architecture_diagram.png` (or `.md` or `.pdf`)
+
+## Timeline awareness
+
+- 28 days total: May 18 → June 15, 2026
+- Submit by **EOD June 14**, never trust the portal on deadline day
+- Step 09 (demo + submission) reserves Week 4 — protect that buffer
+- Splunk Enterprise trial expires July 17 (winners day); Developer License extends to 6 months — apply within first 7 days
+- Splunk Cloud trial provisioning takes 24–48h; apply Day 1</div>
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<section>
+  <div class="section-num">§ D — Acceptance</div>
+  <h2>How you know Step 01 is done.</h2>
+
+  <ul>
+    <li>Splunk Enterprise installed locally and login works</li>
+    <li>Splunk Developer License application submitted (confirmation email received)</li>
+    <li>Splunk Cloud trial registered (provisioning may still be pending — that's fine)</li>
+    <li>Splunk MCP Server v1.1.2 installed on your Enterprise instance</li>
+    <li>Bearer token generated from inside the MCP Server app and stored securely (1Password, env file, etc. — never committed)</li>
+    <li>Dedicated <code>mcp_user</code> account created with <code>mcp_tool_execute</code> capability</li>
+    <li>Python 3.13 environment with <code>splunk-sdk-python==3.0.0</code> installed; <code>import splunklib.ai</code> succeeds</li>
+    <li>Ollama running locally; <code>ollama run llama3.1:8b-instruct "hello"</code> returns a response</li>
+    <li>20-line connection test script successfully calls <code>splunk_get_info</code> via the MCP Server and prints the response</li>
+    <li>GitHub repo created; Apache 2.0 LICENSE present; README placeholder; <code>skill.md</code> committed</li>
+    <li>Devpost participation confirmed</li>
+    <li>Wise USD account in setup</li>
+  </ul>
+</section>
+
+<div class="ornament">✦</div>
+
+<section>
+  <div class="section-num">§ E — Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s06">§06 — The Splunk AI stack</a> — exact versions and SDK pitfalls</li>
+    <li><a href="brief-spec.html#s10">§10 — The build stack</a> — concrete dependencies</li>
+    <li><a href="brief-spec.html#s11">§11 — Resolved constraints</a> — RBAC, OAuth, Cloud-only</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="brief-spec.html">← Brief spec</a>
+  <div class="center">Step 01 complete · onward</div>
+  <a href="step-2.html">Step 02 — Scanner →</a>
+</nav>
+
+</div>
+</body>
+</html>

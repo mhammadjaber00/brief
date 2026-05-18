@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 09 — Demo &amp; submission</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-8.html">← Step 08</a>
+  <div class="center">Step 09 of 09</div>
+  <a href="brief-spec.html">Brief spec ↑</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 4 · Days 3–7 · June 10–14, 2026</div>
+  <h1 class="display">Step Nine<span class="period">.</span></h1>
+  <p class="subtitle">The final week — demo, video, README, architecture diagram, and Devpost submission by EOD June 14.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>Three deployment shapes work. The pipeline is solid. Steps 02 through 08 produced the code; Step 09 produces the artifacts the hackathon judges actually see: a polished README, a final architecture diagram at the exact filename the rules require, a 3-minute demo video that lands the core insight, and a Devpost submission package.</p>
+  <p>Submit by <strong>EOD June 14, 2026</strong> — never trust the Devpost portal on deadline day (June 15, 09:00 PDT). The last 24 hours are reserved for fixes that surface only after you upload.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 09 delivers.</h2>
+  <ul>
+    <li>A demo-target Splunk app picked, baseline-audited, and ready for the before/after</li>
+    <li><code>architecture_diagram.png</code> at the repo root (the rules require this exact filename)</li>
+    <li>A polished <code>README.md</code> meeting all hackathon requirements</li>
+    <li>A 3-minute demo video, public on YouTube</li>
+    <li>Devpost submission complete by EOD June 14</li>
+    <li>One day of buffer (June 14 evening through June 15 morning) for fixes</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">This step is mostly content production, not code. The prompt below is a checklist for you (the human), not for an AI coding agent.
+
+<strong>Day 1 — Pick the demo target</strong>
+
+Browse Splunkbase and shortlist 3 TAs that meet ALL of:
+- Modest size (under 50 saved searches — keeps demo runtime tight)
+- Visibly sparse descriptions when you inspect savedsearches.conf
+- Security or popular-tech category (so Foundation-Sec applies and audience cares)
+- Open license you're comfortable showing on camera
+
+Run <code>brief scan</code> against each. The one with the worst readiness score AND the most visually compelling SPL (clear MITRE-relevant searches like failed-auth detection) is your demo target. Note the baseline score.
+
+Suggested candidates to inspect (verify still on Splunkbase):
+- Older TAs for common security tools (firewall, IDS, EDR vendors)
+- Any TA that hasn't been updated since 2023
+
+Run a full <code>brief audit</code> on the chosen target. Inspect the diff and HTML report. If the generated descriptions look bad, this is your last chance to iterate on prompts.
+
+<strong>Day 2 — Architecture diagram</strong>
+
+The hackathon rules require a file at repo root named EXACTLY <code>architecture_diagram.png</code> (or .md or .pdf). Replace the placeholder from Step 01.
+
+The diagram should show:
+- Three deployment shapes (CLI, Splunk app, GitHub Action) on the left
+- The Brief Agent (splunklib.ai) in the center
+- The Splunk AI tools used (MCP Server, AI Assistant for SPL, Hosted Models) on the right
+- The four output artifacts at the bottom
+
+Tools that work: draw.io / Excalidraw / Figma / OmniGraffle. Export at high DPI (at least 1500px wide). Match the visual language of brief-spec.html if you have time — warm off-white, sage / amber accents.
+
+<strong>Day 3 — README polish</strong>
+
+The README is what judges read before clicking anything. It must contain:
+
+1. <strong>Hero section</strong> — one-line tagline, one-paragraph what Brief is, the headline before/after score from your demo
+2. <strong>Problem statement</strong> — quote Splunk's April 2026 "Agent-Ready" directive
+3. <strong>How it works</strong> — the 4-stage pipeline, with diagram
+4. <strong>The three deployment shapes</strong> — CLI, Splunk app, GitHub Action, each with a copy-pasteable usage snippet
+5. <strong>Setup instructions</strong> — Python 3.13, splunk-sdk-python==3.0.0, MCP Server v1.1.2, Ollama setup
+6. <strong>Configuration</strong> — env vars table
+7. <strong>Live demo</strong> — link to the YouTube video
+8. <strong>The Splunk AI stack used</strong> — links to splunklib.ai, MCP Server, Hosted Models, AI Assistant for SPL
+9. <strong>Roadmap</strong> — upstream contribution to AppInspect for semantic quality rules (per the spec's §11 resolution)
+10. <strong>License</strong> — Apache 2.0 link
+11. <strong>Acknowledgments</strong> — Splunk's "Agent-Ready" directive that inspired the project, the SDK contributors whose PRs you relied on
+
+Keep it scannable. Use the same warm tone as brief-spec.html.
+
+<strong>Day 4 — Demo video recording (under 3 minutes, hard limit)</strong>
+
+The video is what wins or loses the hackathon. Script:
+
+<strong>0:00–0:15</strong> — Opening. On-screen text: "In April 2026, Splunk told developers their apps need to be agent-ready." Cut to the April 2026 blog post screenshot. Voiceover: "Splunk said it. Then offered free 1-on-1 consulting to fix it. With 2,800 apps on Splunkbase, that doesn't scale."
+
+<strong>0:15–0:35</strong> — The problem made tangible. Show the demo target TA's savedsearches.conf. Highlight an undescribed saved search. Voiceover: "This saved search detects credential stuffing across SSH. An AI agent looking at this file has no idea what it does. Description fields are empty. Macros are inscrutable. To the agent, this app is invisible."
+
+<strong>0:35–0:50</strong> — Introduce Brief. Voiceover: "Brief is an AI agent that fixes this. Built on splunklib.ai — released six days before this hackathon — it scans the app, uses Splunk's own AI Assistant to understand each SPL search, then uses Foundation-Sec to generate descriptions an agent can actually call."
+
+<strong>0:50–1:50</strong> — <strong>The transformation moment</strong>. This is your single most important segment. Run <code>brief audit</code> against the demo TA. Cut to the HTML report. Show:
+- Before: readiness score X% (e.g., 14%)
+- After: projected Y% (e.g., 92%)
+- Zoom in on one saved search: before was empty / tautological; after has full description, output fields, AND <strong>MITRE T1110.001</strong> tag
+
+The MITRE tag is the magic. It demonstrates Foundation-Sec doing something a general model couldn't. Make it visually pop.
+
+<strong>1:50–2:20</strong> — Show the three deployment shapes. Quick cuts: CLI in terminal, Splunk app dashboard rendering scores across 5 installed apps, GitHub Action posting a PR comment.
+
+<strong>2:20–2:40</strong> — The diff PR. Cut to GitHub. Show the auto-opened PR with the description changes. Voiceover: "Brief never overwrites. Every change is a unified diff in a pull request — humans approve before merge."
+
+<strong>2:40–3:00</strong> — Outro. On-screen: "Brief. Built for the Splunk Agentic Ops Hackathon. Apache 2.0. github.com/&lt;you&gt;/brief." End with a Splunk MCP Server logo crossfade.
+
+Record screen with OBS or Loom. Use a clean terminal theme. Punch in volume normalization on the voiceover. Upload to YouTube as Public (NOT Unlisted — the hackathon rules require public).
+
+<strong>Day 5 — Devpost submission</strong>
+
+On Devpost, complete:
+1. <strong>Project name</strong>: Brief
+2. <strong>Tagline</strong>: "An AI agent that teaches Splunk apps to speak agent."
+3. <strong>Inspiration</strong>: paste from §01 of brief-spec.html
+4. <strong>What it does</strong>: paste from §02 of brief-spec.html
+5. <strong>How we built it</strong>: paste from §03 + §06 of brief-spec.html, compressed
+6. <strong>Challenges we ran into</strong>: write fresh — the splunklib.ai PR #743/#759 breakages, the OAuth 2.1 closed-preview discovery, the local fallback requirement
+7. <strong>Accomplishments</strong>: write fresh — three deployment shapes in 4 weeks, full splunklib.ai integration days after its release
+8. <strong>What we learned</strong>: write fresh
+9. <strong>What's next</strong>: AppInspect upstream contribution; Splunkbase listing; multi-app dashboards
+10. <strong>Built with</strong>: tag splunklib.ai, MCP Server, Splunk Hosted Models, Foundation-Sec, gpt-oss, AI Assistant for SPL, Ollama, Llama-3.1, AppInspect, Python, Pydantic, Typer, GitHub Actions, Docker
+11. <strong>Try it out</strong>: link to GitHub repo + YouTube demo
+12. <strong>Image gallery</strong>: 4–6 screenshots — HTML report, dashboard, diff PR, MCP manifest, architecture diagram
+
+<strong>SUBMIT BY EOD JUNE 14</strong>. Not midnight. Not the deadline morning. Devpost portals reliably collapse on deadline day.
+
+<strong>Day 6 — Buffer</strong>
+
+Final 24 hours: fix anything broken. Address feedback if any reviewer comments. Watch the demo video one more time on a phone screen — that's where most viewers will watch it.
+
+<strong>Constraints</strong>
+- Video MUST be under 3 minutes — over runs at 3:00 risk disqualification
+- Video MUST be public on YouTube or Vimeo — Unlisted may be rejected
+- Repo MUST be public with a detectable OSI license file at root
+- File MUST be named exactly <code>architecture_diagram.png</code> (or .md/.pdf) at repo root
+- Never submit during the final 12 hours before deadline</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 09 is done.</h2>
+  <ul>
+    <li>Demo target TA chosen and full audit run produces a strong before/after score</li>
+    <li><code>architecture_diagram.png</code> exists at repo root</li>
+    <li>README has all 11 sections listed above, scannable in under 2 minutes</li>
+    <li>Demo video is under 3:00, public on YouTube, and lands the MITRE T1110.001 transformation moment</li>
+    <li>Devpost submission complete — all 12 fields filled, image gallery populated, links verified</li>
+    <li>Submitted by EOD June 14, with a full day of buffer before the official deadline</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s09">§09 — Why this wins</a>, the criteria mapping</li>
+    <li><a href="brief-spec.html#s12">§12 — Resources</a>, the hackathon links</li>
+  </ul>
+</section>
+
+<div class="callout">
+  <div class="callout-label">After submission</div>
+  Brief is a real piece of software regardless of how the hackathon scores it. The Splunkbase listing, the AppInspect contribution, the broader ecosystem narrative — those exist independent of any prize. The hackathon is a forcing function; the artifact lives longer.
+</div>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-8.html">← Step 08</a>
+  <div class="center">Build plan complete</div>
+  <a href="brief-spec.html">↑ Brief spec</a>
+</nav>
+
+</div>
+</body>
+</html>

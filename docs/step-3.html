@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 03 — SPL comprehension</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-2.html">← Step 02</a>
+  <div class="center">Step 03 of 09</div>
+  <a href="step-4.html">Step 04 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 2 · Days 1–2 · May 25–26, 2026</div>
+  <h1 class="display">Step Three<span class="period">.</span></h1>
+  <p class="subtitle">SPL comprehension — turn obfuscated, macro-laden searches into structured explanations.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>The scanner from Step 02 enumerates every object in an app and flags which ones lack descriptions. For each undescribed saved search, Stage 3 (generation) needs to know <em>what the SPL actually does</em> — not just what it textually looks like.</p>
+  <p>SPL is hard to reason about textually: macros nest opaquely (a search referencing <code>`cs_network_traffic`</code> reveals nothing without macro expansion), pipes can be deeply chained, and field references depend on extracted vs. raw context. Step 03 offloads this comprehension to Splunk's own <code>saia_explain_spl</code> tool via the MCP Server. A local Ollama fallback handles offline scenarios.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 03 delivers.</h2>
+  <ul>
+    <li>A macro expander that inlines every backtick-referenced macro before any SPL is sent to the explainer</li>
+    <li>An <code>saia_explain_spl</code> wrapper that calls the MCP Server in live mode</li>
+    <li>A local Ollama-based fallback for offline mode (no MCP available)</li>
+    <li>A unified <code>SPLExplanation</code> Pydantic model with the structured output of both paths</li>
+    <li>A simple caching layer so the same SPL is never re-explained within a run</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Then build Brief's SPL comprehension layer — Stage 2 of the pipeline.
+
+<strong>Files to create</strong>
+
+<em>src/brief/spl/macro_expander.py</em>
+A `MacroExpander` class that takes:
+- The full `macros.conf` parsed dict (from Step 02's `ConfParser`)
+- A raw SPL string
+
+And returns the SPL with every backtick-referenced macro inlined. Rules:
+- Macros use backtick syntax: <code>`macro_name`</code> or <code>`macro_name(arg1, arg2)`</code>
+- Argument substitution: in a macro with `args = field1, field2`, references to `$field1$` in the body get replaced
+- Handle nested macros — expand recursively until no more backticks remain
+- Cap recursion depth at 10 to prevent runaway expansion on malformed configs
+
+Public method: `expand(spl: str, macros: dict) -> str`. Returns the fully-inlined search.
+
+<em>src/brief/spl/models.py</em>
+```python
+class SPLExplanation(BaseModel):
+    indexes_queried: list[str]
+    sourcetypes_filtered: list[str]
+    fields_extracted: list[str]
+    transformations: list[str]    # human-readable: "groups by user", "counts events", etc.
+    output_shape: str              # one-line description of result table
+    summary: str                   # 2-3 sentences
+    source: Literal["saia", "ollama"]  # which backend produced this
+```
+
+<em>src/brief/spl/explainer_saia.py</em>
+The `saia_explain_spl` MCP wrapper. Public function: `explain_via_saia(spl: str, mcp_client) -> SPLExplanation`.
+- Uses `splunklib.ai` to call the MCP tool
+- Authentication via bearer token from environment / config
+- Parse the natural-language response into the structured `SPLExplanation` shape using a second LLM pass (the explainer returns prose; we need structured)
+- Or use the model's structured-output mode if the MCP tool supports it
+- On failure: raise a typed exception, don't silently fall through. The caller decides whether to fall back to Ollama.
+
+<em>src/brief/spl/explainer_ollama.py</em>
+Local fallback using Ollama with `llama3.1:8b-instruct`. Public function: `explain_via_ollama(spl: str) -> SPLExplanation`.
+- Uses the `ollama` Python package
+- Sends a structured prompt asking the model to identify indexes, sourcetypes, fields, transformations, and output shape
+- Uses Pydantic schema-guided output (Ollama supports JSON mode)
+- Returns the same `SPLExplanation` shape so downstream code is backend-agnostic
+
+The system prompt for Ollama lives in `src/brief/spl/prompts.py`. It should explicitly teach the model that SPL is pipe-delimited, that indexes come before the first pipe, that `| stats`, `| chart`, `| timechart` are aggregation commands, etc. Keep the prompt focused — under 400 tokens.
+
+<em>src/brief/spl/__init__.py</em>
+Unified entry point: `explain(spl: str, macros: dict, mode: Literal["live", "offline"]) -> SPLExplanation`.
+- First call `macro_expander.expand()` to inline macros
+- If `mode == "live"`, call `explain_via_saia()`; on failure, log and fall back to Ollama
+- If `mode == "offline"`, call `explain_via_ollama()` directly
+- Wrap with a simple in-memory cache keyed on the expanded SPL — same SPL is never re-explained within a session
+
+<strong>Constraints</strong>
+- <strong>DO NOT</strong> call generation models yet — that's Step 04
+- <strong>DO NOT</strong> emit any descriptions — Stage 3's job
+- The explainer's output must be backend-agnostic — downstream code must not care whether saia or Ollama produced the explanation
+- Cache key must be the <em>expanded</em> SPL, not the raw — different macro environments may yield different expansions of the same raw search
+
+<strong>Testing</strong>
+- Unit-test macro expansion against fixtures: simple, nested, with-args, recursion-cap
+- Mock the saia path with a fixture response — don't make real MCP calls in unit tests
+- Integration test: real Ollama call on 3 sample searches from the Step 02 fixture TA. Assert the explanation includes the correct indexes.
+- Cache test: call `explain()` twice on the same SPL; assert the second call doesn't hit the backend
+
+<strong>Acceptance</strong>
+- `pytest tests/test_spl.py` passes
+- Manual test: pick a saved search from your fixture TA that uses a macro. Run `explain()` on it in offline mode. Verify the output `summary` makes sense.
+- Caching works: log the cache hit rate during a full app scan; should be &gt;30% for typical TAs (macros and similar searches repeat)</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 03 is done.</h2>
+  <ul>
+    <li>Macro expansion handles nested macros without infinite loops</li>
+    <li>Both <code>explain_via_saia</code> and <code>explain_via_ollama</code> produce <code>SPLExplanation</code> objects with the same shape</li>
+    <li>Live mode falls back to Ollama gracefully when MCP is unreachable</li>
+    <li>The cache is keyed correctly — repeated calls on the same expanded SPL skip the backend</li>
+    <li>An end-to-end test on the Step 02 fixture TA produces explanations for at least 80% of its saved searches without errors</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s03">§03 — The pipeline</a>, Stage 02</li>
+    <li><a href="brief-spec.html#s06">§06 — The Splunk AI stack</a>, Splunk AI Assistant for SPL entry</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-2.html">← Step 02</a>
+  <div class="center">Step 03 complete · onward</div>
+  <a href="step-4.html">Step 04 — Description generation →</a>
+</nav>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 07 — Splunk app deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-6.html">← Step 06</a>
+  <div class="center">Step 07 of 09</div>
+  <a href="step-8.html">Step 08 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 3 · Days 5–7 · June 5–7, 2026</div>
+  <h1 class="display">Step Seven<span class="period">.</span></h1>
+  <p class="subtitle">Brief as a Splunk app — installable, schedulable, and observable from a dashboard alongside the apps it audits.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>The CLI is the developer workflow shape. Step 07 builds the <em>internal compliance tool</em> shape: Brief packaged as a real Splunk app, installable on a Splunk Cloud or Enterprise instance, scheduled to run periodically, and exposing a dashboard that shows the agent-readiness score for every other installed app on the deployment.</p>
+  <p>This deployment shape unlocks the Hosted Models path — when Brief runs <em>inside</em> Splunk Cloud, Foundation-Sec and gpt-oss-20b become natively reachable. It's the strongest demo of the project's Splunk-platform fit.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 07 delivers.</h2>
+  <ul>
+    <li>A complete Splunk app structure under <code>src/brief/app_splunk/</code></li>
+    <li><code>app.manifest</code> + <code>default/app.conf</code> with proper metadata</li>
+    <li>A scheduled saved search that triggers a Brief audit weekly</li>
+    <li>A Splunk dashboard showing readiness scores per installed app, with drill-down</li>
+    <li>AppInspect validation passing without errors</li>
+    <li>The app packaged as <code>brief-app-0.1.0.spl</code> ready for Splunkbase submission</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Critical: for cross-app enumeration, the service account running Brief inside Splunk needs <strong>sc_admin role with mcp_tool_admin capability</strong> — not just mcp_user. Document this clearly in the install instructions.
+
+Build the Splunk app deployment shape.
+
+<strong>Files to create</strong>
+
+<em>src/brief/app_splunk/app.manifest</em>
+```json
+{
+  "schemaVersion": "2.0.0",
+  "info": {
+    "title": "Brief — Agent-Readiness Auditor",
+    "id": {
+      "group": null,
+      "name": "brief",
+      "version": "0.1.0"
+    },
+    "author": [{"name": "<your name>", "email": "<your email>"}],
+    "releaseDate": "2026-06-07",
+    "description": "Audits installed Splunk apps for AI-agent-readiness. Generates semantic descriptions, agent-readiness scores, and MCP manifests using Foundation-Sec and gpt-oss-20b via Splunk Hosted Models.",
+    "classification": {
+      "intendedAudience": "Developers, Administrators",
+      "categories": ["AI/ML", "Utilities", "Developer Tools"],
+      "developmentStatus": "Beta"
+    },
+    "commonInformationModels": {},
+    "license": {
+      "name": "Apache-2.0",
+      "uri": "https://www.apache.org/licenses/LICENSE-2.0"
+    }
+  },
+  "dependencies": null,
+  "tasks": [],
+  "inputGroups": {},
+  "incompatibleApps": {},
+  "platformRequirements": {
+    "splunk": {
+      "Enterprise": "9.0+",
+      "CloudPlatform": "*"
+    }
+  }
+}
+```
+
+<em>src/brief/app_splunk/default/app.conf</em>
+Standard app.conf with `is_visible = 1`, `state = enabled`, proper `[ui]` block with label and description, `[launcher]` block. Reference any other modern Splunk app's app.conf as a template.
+
+<em>src/brief/app_splunk/default/savedsearches.conf</em>
+A scheduled audit search. The "search" is a single custom command call that triggers the Brief agent:
+
+```ini
+[brief_weekly_audit]
+search = | brief_audit mode=live
+dispatch.earliest_time = -7d
+dispatch.latest_time = now
+cron_schedule = 0 3 * * 0
+enableSched = 1
+description = Brief — weekly cross-app agent-readiness audit
+```
+
+<em>src/brief/app_splunk/bin/brief_audit.py</em>
+A Splunk custom search command (using `splunklib.searchcommands.GeneratingCommand`) that wraps the same `audit_app()` orchestrator from Step 04. Iterates over installed apps in `$SPLUNK_HOME/etc/apps/`, runs the agent in live mode, writes results to a Brief-internal index (`brief_scores`) for the dashboard to read.
+
+<em>src/brief/app_splunk/default/data/ui/views/brief_dashboard.xml</em>
+Splunk Simple XML dashboard with these panels:
+1. <strong>Headline panel</strong> — aggregate readiness score across all installed apps (single value, large)
+2. <strong>App ranking table</strong> — every installed app with its score, sortable. Drill down to a per-app detail dashboard
+3. <strong>Trend over time</strong> — line chart of overall readiness over the last 90 days (requires multiple historical scans)
+4. <strong>Worst-performers panel</strong> — top 5 apps with the lowest scores, with their dominant issues (missing descriptions, tautologies, safety violations)
+5. <strong>Coverage breakdown</strong> — stacked bar showing presence / quality / coverage / safety contribution per app
+
+Style: use Splunk's modern dashboard CSS. Don't over-customize — judges value clean, native-looking dashboards.
+
+<em>src/brief/app_splunk/default/data/ui/views/brief_app_detail.xml</em>
+Per-app drilldown showing every saved search with its current score, generated description (if any), and a link to the diff PR / MCP manifest stored as KV-store entries.
+
+<em>src/brief/app_splunk/metadata/default.meta</em>
+Standard meta file. Read access to `role_user`, write to `role_admin`. The dashboards should be visible to anyone who can read the Brief app.
+
+<em>src/brief/app_splunk/README.md</em>
+Brief-specific install instructions:
+- Required role for the service account: <strong>sc_admin</strong> + <strong>mcp_tool_admin</strong> capability
+- Splunk Cloud only (Foundation-Sec / Hosted Models requirement)
+- Splunk Enterprise 9.0+ required
+- Manual token generation step from inside the MCP Server app (NOT Settings → Tokens)
+- Walk through the dashboards once installed
+
+<strong>AppInspect validation</strong>
+
+Run <code>splunk-appinspect inspect src/brief/app_splunk/</code> after each significant change. Fix every error (warnings are acceptable but document them). The hackathon expects clean AppInspect passes.
+
+<strong>Packaging</strong>
+
+A simple script in <code>scripts/package-app.sh</code>:
+```bash
+cd src/brief/app_splunk/
+tar -czf ../../../brief-app-0.1.0.spl --exclude='__pycache__' --exclude='*.pyc' .
+```
+
+Final artifact: <code>brief-app-0.1.0.spl</code> at repo root, ready to upload to a Splunk instance or attach to a Splunkbase submission.
+
+<strong>Constraints</strong>
+- The custom search command must complete within Splunk's default 5-minute search timeout, OR run as a scheduled report (not interactive)
+- The Brief app must not interfere with audited apps — read-only access to other apps' filesystems
+- Never commit a token to the app — admins configure it via the app setup screen
+- Compliance with Splunk app review standards: no eval'd strings, no unsafe imports, no hardcoded paths
+
+<strong>Testing</strong>
+- Install the .spl file on your local Splunk Enterprise — verify it loads without errors
+- Run the dashboard manually — verify panels populate
+- Trigger the scheduled search manually — verify it runs end-to-end and writes to the brief_scores index
+- AppInspect passes with zero fatal errors
+
+<strong>Acceptance</strong>
+- The .spl file installs cleanly on your local Splunk Enterprise
+- The Brief dashboard shows readiness scores for at least 3 installed apps
+- AppInspect output is clean
+- Install instructions in the app's README are accurate enough that a stranger could install it</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 07 is done.</h2>
+  <ul>
+    <li><code>brief-app-0.1.0.spl</code> installs on local Splunk Enterprise without errors</li>
+    <li>The Brief dashboard renders with all 5 panels populated</li>
+    <li>The scheduled search runs end-to-end and writes scores to the <code>brief_scores</code> index</li>
+    <li>AppInspect produces no fatal errors</li>
+    <li>The install instructions in the README clearly call out the sc_admin / mcp_tool_admin role requirement</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s08">§08 — Operating modes</a>, Splunk app shape</li>
+    <li><a href="brief-spec.html#s11">§11 — Resolved constraints</a>, RBAC propagation</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-6.html">← Step 06</a>
+  <div class="center">Step 07 complete · onward</div>
+  <a href="step-8.html">Step 08 — GitHub Action shape →</a>
+</nav>
+
+</div>
+</body>
+</html>

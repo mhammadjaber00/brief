@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 05 — Scoring &amp; output artifacts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-4.html">← Step 04</a>
+  <div class="center">Step 05 of 09</div>
+  <a href="step-6.html">Step 06 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 2 day 6 → Week 3 day 2 · May 30–June 2, 2026</div>
+  <h1 class="display">Step Five<span class="period">.</span></h1>
+  <p class="subtitle">The three artifacts: readiness score, diff PR, MCP manifest. Plus the HTML report that ties them together.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>Steps 02 through 04 produce the data: scan report, SPL explanations, generated descriptions, quality scores. Step 05 turns that data into the four artifacts a developer actually consumes: a composite agent-readiness score, a unified-diff PR file, an MCP manifest YAML, and an HTML report ready for the demo video.</p>
+  <p>This is the largest step — it spans the end of Week 2 and the start of Week 3. The HTML report in particular is what shows up on screen in the 3-minute demo, so spend design effort here.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 05 delivers.</h2>
+  <ul>
+    <li>The composite scoring formula (presence 40 / quality 30 / coverage 20 / safety 10), rolled up per object → per file → per app</li>
+    <li>A unified-diff generator that proposes description inserts/modifications without overwriting</li>
+    <li>An MCP manifest emitter producing a valid <code>mcp_manifest.yaml</code></li>
+    <li>An HTML readiness report — the demo-ready visual</li>
+    <li>A <code>score.json</code> structured output for downstream tooling</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Build Brief's Stage 4 — scoring and output artifact emission.
+
+<strong>Files to create</strong>
+
+<em>src/brief/scoring/score.py</em>
+The composite scoring engine. Public function: `score_app(report: AppScanReport, descriptions: dict, quality: dict) -> AppScore`.
+
+```python
+class ObjectScore(BaseModel):
+    object_name: str
+    presence: float        # 0 or 1
+    quality: float         # 0-1 (rubric score / 10), 0 if no description
+    safety: float          # 1 if safe, 0.5 if warnings, 0 if violations
+    composite: float       # weighted: 0.4*presence + 0.3*quality + 0.3*safety_or_coverage_at_object_level
+
+class FileScore(BaseModel):
+    file_name: str
+    coverage: float        # fraction of objects with adequate descriptions
+    avg_quality: float
+    composite: float
+
+class AppScore(BaseModel):
+    app_name: str
+    overall_score: int     # 0-100
+    presence_pct: int      # 0-100
+    quality_avg: int       # 0-100
+    coverage_pct: int      # 0-100
+    safety_pct: int        # 0-100
+    objects: list[ObjectScore]
+    files: list[FileScore]
+```
+
+Weighting from the spec: presence 40, quality 30, coverage 20, safety 10. Overall score = weighted sum, rounded to integer.
+
+<em>src/brief/emit/diff.py</em>
+Unified-diff generator. Public function: `generate_diff(report: AppScanReport, descriptions: dict, source_path: Path) -> str`.
+- For every undescribed object, propose inserting `description = ...` in the appropriate .conf file
+- For low-quality descriptions, propose replacing them
+- Use `difflib.unified_diff` for the output format
+- Output is git-apply-compatible — test with `git apply --check`
+- Save to `descriptions.diff` in the output directory
+- <strong>Never modify input files.</strong> Diff only.
+
+<em>src/brief/emit/manifest.py</em>
+MCP manifest YAML emitter. Public function: `emit_manifest(report: AppScanReport, descriptions: dict, output_path: Path) -> Path`.
+Schema:
+```yaml
+app: TA_security_monitoring
+version: 1.2.0
+generated_by: brief v0.1.0
+generated_at: 2026-06-01T14:32:00Z
+tools:
+  - name: get_failed_auth_24h
+    saved_search: get_failed_auth_24h
+    description: |
+      Returns count of failed Linux SSH logins (event 4625) by user
+      and source IP in the last 24h. Use for credential stuffing.
+    output_fields: [user, src_ip, count]
+    mitre_techniques: [T1110.001, T1078]
+    rbac_role: mcp_user
+    estimated_runtime: fast
+    suitable_for_agent: true
+```
+
+Only include tools where `suitable_for_agent=True` and the safety analyzer didn't flag violations. Use `pyyaml` with `default_flow_style=False` for clean output.
+
+<em>src/brief/emit/report.py</em>
+HTML readiness report generator. Public function: `generate_html_report(report: AppScanReport, score: AppScore, descriptions: dict) -> str`.
+
+This is the demo-facing artifact. Design requirements:
+- Top: a large headline number (the overall score, 0-100) with a circular or bar progress visualization
+- Subscores: presence / quality / coverage / safety as four secondary numbers
+- Per-file table: name, object count, coverage %, contribution to overall score
+- Per-object table: for each saved search, show: name, original description (empty or quoted), proposed description (truncated to 120 chars), quality score, MITRE tags
+- Toggle-style "before / after" example for the demo highlight: pick the worst-scoring object and show its before/after
+- Use embedded CSS (no external stylesheet) so the file is portable
+- Use the same design tokens as `brief-spec.html`: Instrument Serif headlines, Geist body, JetBrains Mono for code, warm off-white background
+
+Save to `report.html` in the output directory.
+
+<em>src/brief/emit/__init__.py</em>
+Orchestrator: `emit_all(report, score, descriptions, output_dir) -> dict[artifact_name, Path]`. Calls all four emitters and returns a mapping of artifact name to file path.
+
+<strong>Constraints</strong>
+- <strong>NEVER</strong> modify the input app files in place — Brief only proposes via diff
+- The HTML report must be self-contained (inline CSS, inline SVG) — portable and demo-able
+- The MCP manifest must be valid YAML — validate with a load round-trip in the unit test
+- Score numbers must round to integers in the HTML report — no floats on screen (per Brief design tokens)
+
+<strong>Testing</strong>
+- Unit-test the scoring formula with synthetic inputs: 0%, 50%, 100% coverage cases
+- Snapshot-test the diff output so future changes are reviewable in git
+- Validate the MCP manifest with `yaml.safe_load(open(path))` and assert structure
+- Visual test: open the HTML report in a browser; eyeball it for demo-readiness
+- Integration test: run `audit_app() → emit_all()` end-to-end on the fixture TA. Assert four files land in the output directory.
+
+<strong>Acceptance</strong>
+- All four artifacts produced cleanly on the fixture TA
+- HTML report renders well in a browser — looks demo-ready
+- Diff applies cleanly with `git apply` against the fixture
+- YAML validates and round-trips</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 05 is done.</h2>
+  <ul>
+    <li><code>brief audit tests/fixtures/sample-ta-1/</code> produces <code>score.json</code>, <code>descriptions.diff</code>, <code>mcp_manifest.yaml</code>, <code>report.html</code> in the output directory</li>
+    <li>The HTML report looks demo-quality — large headline score, before/after example, per-object table</li>
+    <li>Diff applies cleanly to a copy of the fixture TA: <code>git apply descriptions.diff</code> succeeds</li>
+    <li>MCP manifest YAML validates structurally and contains only tools marked <code>suitable_for_agent</code></li>
+    <li>Scoring is stable across runs (same input → same scores, modulo LLM nondeterminism in quality)</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s03">§03 — The pipeline</a>, Stage 04</li>
+    <li><a href="brief-spec.html#s05">§05 — What Brief outputs</a> — the three artifacts and their schemas</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-4.html">← Step 04</a>
+  <div class="center">Step 05 complete · onward</div>
+  <a href="step-6.html">Step 06 — CLI mode →</a>
+</nav>
+
+</div>
+</body>
+</html>

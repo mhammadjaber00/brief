@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief — Build Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 17px;
+  line-height: 1.65;
+  color: #1A1611;
+  background: #FAF7F2;
+  font-feature-settings: "ss01", "ss03", "kern";
+  -webkit-text-size-adjust: 100%;
+}
+
+/* —— Subtle paper grain ———————————— */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0 0.1 0 0 0 0.03 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  opacity: 0.6;
+  z-index: 9999;
+  mix-blend-mode: multiply;
+}
+
+/* —— Layout ———————————— */
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 100px 36px 140px;
+  position: relative;
+}
+
+/* —— Masthead ———————————— */
+.masthead {
+  margin-bottom: 100px;
+  padding-bottom: 48px;
+  border-bottom: 0.5px solid #E5DFD3;
+}
+.meta-line {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8A8175;
+  margin: 0 0 32px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.meta-line::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #B5731E;
+  border-radius: 50%;
+}
+.display {
+  font-family: 'Instrument Serif', 'Georgia', serif;
+  font-size: clamp(80px, 14vw, 148px);
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  margin: 0 0 28px;
+  font-weight: 400;
+  color: #1A1611;
+}
+.display .period { color: #B5731E; }
+.subtitle {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(22px, 3.4vw, 30px);
+  line-height: 1.25;
+  font-style: italic;
+  font-weight: 400;
+  color: #4A4339;
+  margin: 0 0 32px;
+  max-width: 580px;
+  letter-spacing: -0.005em;
+}
+.byline {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #8A8175;
+  max-width: 540px;
+  margin: 0;
+}
+.byline strong { color: #4A4339; font-weight: 500; }
+
+/* —— TOC ———————————— */
+.toc {
+  margin: 80px 0 120px;
+  padding: 28px 32px 26px;
+  background: #F5EFE3;
+  border-radius: 4px;
+  position: relative;
+}
+.toc::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: #B5731E;
+}
+.toc-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8A8175;
+  margin: 0 0 16px;
+}
+.toc ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: toc-counter;
+  columns: 2;
+  column-gap: 32px;
+}
+.toc li {
+  counter-increment: toc-counter;
+  margin: 0 0 8px;
+  break-inside: avoid;
+  font-size: 15px;
+}
+.toc li::before {
+  content: counter(toc-counter, decimal-leading-zero);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #B5731E;
+  margin-right: 12px;
+  letter-spacing: 0.05em;
+}
+.toc a {
+  color: #1A1611;
+  text-decoration: none;
+  border-bottom: 0.5px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+.toc a:hover {
+  color: #4F6B5C;
+  border-bottom-color: #4F6B5C;
+}
+
+/* —— Sections ———————————— */
+section { margin: 120px 0; }
+section:first-of-type { margin-top: 0; }
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #B5731E;
+  margin: 0 0 18px;
+  text-transform: uppercase;
+}
+h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(38px, 5.5vw, 52px);
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  font-weight: 400;
+  margin: 0 0 40px;
+  color: #1A1611;
+  max-width: 600px;
+}
+h3 {
+  font-family: 'Geist', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 44px 0 14px;
+  color: #1A1611;
+}
+h3.stage {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #4F6B5C;
+  margin: 36px 0 10px;
+  font-weight: 500;
+}
+h3.stage + h4 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  font-style: italic;
+  font-weight: 400;
+  margin: 0 0 16px;
+  color: #1A1611;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 22px; }
+p:last-child { margin-bottom: 0; }
+
+/* —— Links ———————————— */
+a {
+  color: #4F6B5C;
+  text-decoration: underline;
+  text-decoration-thickness: 0.5px;
+  text-underline-offset: 3px;
+  transition: color .15s, text-decoration-thickness .15s;
+}
+a:hover {
+  color: #3E574A;
+  text-decoration-thickness: 1.5px;
+}
+
+/* —— Inline code ———————————— */
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.85em;
+  background: #F1EBE0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  color: #5C4B33;
+}
+pre {
+  background: #F1EBE0;
+  border-radius: 4px;
+  padding: 22px 26px;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 28px 0;
+  color: #3A3128;
+  border-left: 2px solid #4F6B5C;
+}
+pre code { background: none; padding: 0; font-size: 13px; color: inherit; }
+
+/* —— Pull quote ———————————— */
+.pullquote {
+  margin: 40px 0;
+  padding: 32px 36px;
+  border-left: 2px solid #B5731E;
+  background: #F8F2E6;
+  font-family: 'Instrument Serif', serif;
+  font-size: 23px;
+  font-style: italic;
+  line-height: 1.42;
+  color: #3D332A;
+  letter-spacing: -0.005em;
+}
+.pullquote cite {
+  display: block;
+  margin-top: 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8A8175;
+}
+.pullquote cite a { color: #8A8175; }
+.pullquote cite a:hover { color: #4F6B5C; }
+
+/* —— Ornament ———————————— */
+.ornament {
+  text-align: center;
+  margin: 100px 0;
+  color: #B5731E;
+  font-family: 'Instrument Serif', serif;
+  font-size: 14px;
+  letter-spacing: 1.4em;
+  user-select: none;
+}
+
+/* —— Lists ———————————— */
+ul, ol {
+  padding-left: 0;
+  margin: 0 0 26px;
+  list-style: none;
+}
+ul li, ol li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 12px;
+  line-height: 1.65;
+}
+ul li::before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: #B5731E;
+  font-family: 'Instrument Serif', serif;
+}
+ol { counter-reset: ord-counter; }
+ol li {
+  counter-increment: ord-counter;
+}
+ol li::before {
+  content: counter(ord-counter) ".";
+  position: absolute;
+  left: 0;
+  color: #B5731E;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  top: 2px;
+}
+
+/* —— Definition list ———————————— */
+dl { margin: 28px 0; }
+dt {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #B5731E;
+  margin: 18px 0 4px;
+  letter-spacing: 0.04em;
+}
+dd {
+  margin: 0 0 18px;
+  color: #3D332A;
+  line-height: 1.65;
+}
+
+/* —— Tables ———————————— */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 28px 0;
+  font-size: 15px;
+}
+th, td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 0.5px solid #E5DFD3;
+  vertical-align: top;
+}
+th {
+  font-weight: 500;
+  color: #1A1611;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: transparent;
+  border-bottom: 1px solid #1A1611;
+  font-family: 'JetBrains Mono', monospace;
+}
+td code { font-size: 0.9em; }
+
+/* —— Callout boxes ———————————— */
+.callout {
+  margin: 32px 0;
+  padding: 22px 26px;
+  background: #F5F0E7;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3D332A;
+}
+.callout-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #B5731E;
+  margin: 0 0 8px;
+  font-weight: 500;
+}
+
+/* —— Inline emphasis ———————————— */
+strong { font-weight: 500; color: #1A1611; }
+em { font-style: italic; }
+
+/* —— Architecture diagram ———————————— */
+.arch-fig {
+  margin: 40px -20px;
+  padding: 32px 20px;
+  background: #F5F0E7;
+  border-radius: 4px;
+}
+.arch-fig svg { display: block; width: 100%; height: auto; }
+.arch-caption {
+  font-size: 12px;
+  color: #8A8175;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.04em;
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* —— Drop cap ———————————— */
+.dropcap::first-letter {
+  font-family: 'Instrument Serif', serif;
+  font-size: 78px;
+  line-height: 0.82;
+  float: left;
+  padding: 6px 12px 0 0;
+  color: #B5731E;
+  font-weight: 400;
+}
+
+/* —— Tags / chips ———————————— */
+.tag {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #4F6B5C;
+  border: 0.5px solid #4F6B5C;
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin: 0 4px 4px 0;
+}
+.tag.amber { color: #8A5612; border-color: #B5731E; }
+
+/* —— Footer ———————————— */
+footer {
+  margin-top: 140px;
+  padding-top: 48px;
+  border-top: 0.5px solid #E5DFD3;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: #8A8175;
+  letter-spacing: 0.04em;
+  line-height: 1.8;
+}
+footer p { margin: 0 0 6px; }
+
+/* —— Resources index ———————————— */
+.resources {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin: 28px 0;
+}
+.resource-group {
+  padding: 20px 0;
+  border-top: 0.5px solid #E5DFD3;
+}
+.resource-group:last-child { border-bottom: 0.5px solid #E5DFD3; }
+.resource-group h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #B5731E;
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+.resource-group ul { margin: 0; }
+.resource-group ul li {
+  font-size: 15px;
+  margin-bottom: 8px;
+  padding-left: 20px;
+}
+.resource-group ul li::before { content: "↗"; font-family: 'Geist', sans-serif; font-size: 12px; top: 4px; }
+
+/* —— Mobile ———————————— */
+@media (max-width: 640px) {
+  .container { padding: 56px 22px 90px; }
+  .display { font-size: 72px; }
+  .subtitle { font-size: 22px; }
+  h2 { font-size: 34px; }
+  body { font-size: 16px; }
+  .toc ol { columns: 1; }
+  .pullquote { padding: 22px 24px; font-size: 19px; }
+  pre { padding: 16px 18px; font-size: 12px; }
+  .arch-fig { margin: 32px -10px; padding: 24px 10px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ━━━━━━━━━━━━━━ MASTHEAD ━━━━━━━━━━━━━━ -->
+<header class="masthead">
+  <div class="meta-line">Build specification · v1.0 · May 18, 2026</div>
+  <h1 class="display">Brief<span class="period">.</span></h1>
+  <p class="subtitle">An AI agent that teaches Splunk apps to speak agent.</p>
+  <p class="byline">
+    Submission for the <a href="https://splunk-agentic-ops.devpost.com/" target="_blank" rel="noopener">Splunk Agentic Ops Hackathon</a>.
+    <strong>Platform &amp; Developer Experience</strong> track.
+    Targeting <strong>Best Use of Splunk Developer Tools</strong> as the stacked bonus prize.
+  </p>
+</header>
+
+<!-- ━━━━━━━━━━━━━━ TOC ━━━━━━━━━━━━━━ -->
+<nav class="toc">
+  <div class="toc-label">Contents</div>
+  <ol>
+    <li><a href="#s01">The problem</a></li>
+    <li><a href="#s02">What Brief is</a></li>
+    <li><a href="#s03">The pipeline</a></li>
+    <li><a href="#s04">What Brief scans</a></li>
+    <li><a href="#s05">What Brief outputs</a></li>
+    <li><a href="#s06">The Splunk AI stack</a></li>
+    <li><a href="#s07">Architecture</a></li>
+    <li><a href="#s08">Operating modes</a></li>
+    <li><a href="#s09">Why this wins</a></li>
+    <li><a href="#s10">The build stack</a></li>
+    <li><a href="#s11">Resolved constraints</a></li>
+    <li><a href="#s12">Resources</a></li>
+    <li><a href="#s13">Build plan</a></li>
+  </ol>
+</nav>
+
+<!-- ━━━━━━━━━━━━━━ §01 ━━━━━━━━━━━━━━ -->
+<section id="s01">
+  <div class="section-num">§ 01 — The problem</div>
+  <h2>Splunk asked for this tool. Nobody built it.</h2>
+
+  <p class="dropcap">On February 4, 2026, Splunk released its <a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">Model Context Protocol Server</a> to general availability, and in doing so fundamentally changed what a Splunk app is for. From that day forward, an app's users were no longer only humans staring at dashboards — they were <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">AI agents</a>, programmatically asking the Splunk platform questions on behalf of those humans.</p>
+
+  <p>Two months later, in April 2026, Splunk published <a href="https://community.splunk.com/t5/Product-News-Announcements/GA-Splunk-MCP-Server-Making-Your-Apps-quot-Agent-Ready-quot/ba-p/759935" target="_blank" rel="noopener">Making Your Apps "Agent-Ready"</a> — an explicit directive to the third-party developer community to optimize their app metadata for AI-agent consumption. The passage at the heart of it reads:</p>
+
+  <div class="pullquote">
+    "AI agents rely on semantic context to understand which tool to call. If your knowledge objects aren't descriptive, the agent is essentially flying blind."
+    <cite><a href="https://community.splunk.com/t5/Product-News-Announcements/GA-Splunk-MCP-Server-Making-Your-Apps-quot-Agent-Ready-quot/ba-p/759935" target="_blank" rel="noopener">Splunk Product News · April 2026</a></cite>
+  </div>
+
+  <p>Splunk's prescription was to add <code>description = ...</code> lines to every <code>savedsearches.conf</code>, <code>macros.conf</code>, and dashboard XML file in every app on <a href="https://splunkbase.splunk.com/" target="_blank" rel="noopener">Splunkbase</a>. The recommended tool: the Splunk <a href="https://dev.splunk.com/" target="_blank" rel="noopener">Developer Advisory &amp; Support team</a>, available for free one-on-one consulting.</p>
+
+  <p>There are over 2,800 apps on Splunkbase. The DAS team is a handful of humans. No tool exists to do this work at scale — verified against Splunk's announced 2026 roadmap, against <a href="https://github.com/splunk/PEAK" target="_blank" rel="noopener">SURGe's open-source portfolio</a>, against every third-party agent vendor (Dropzone, CrowdStrike, SentinelOne, Google, Microsoft), and against the closest existing developer tool, <a href="https://github.com/marketplace/actions/generate-app-build-app-inspect-check-and-splunk-app-utilities" target="_blank" rel="noopener">splunk-app-action</a>, which handles CI/CD packaging and <a href="https://dev.splunk.com/enterprise/reference/appinspect/" target="_blank" rel="noopener">AppInspect</a> compliance but says nothing about agent-readiness.</p>
+
+  <p><strong>Brief is the tool Splunk asked for but didn't build.</strong></p>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §02 ━━━━━━━━━━━━━━ -->
+<section id="s02">
+  <div class="section-num">§ 02 — What Brief is</div>
+  <h2>An agent that prepares apps for agents.</h2>
+
+  <p>Brief reads a Splunk app's metadata, understands what its saved searches actually do, and generates the semantic descriptions that AI agents need in order to discover and call those searches as tools through the <a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">Splunk MCP Server</a>.</p>
+
+  <p>It runs in three shapes: as a Splunk app installed alongside the apps it audits, as a command-line tool pointed at a folder on disk, or as a GitHub Action that runs on every pull request to a Splunk app repository.</p>
+
+  <p>It is built on the <a href="https://github.com/splunk/splunk-sdk-python" target="_blank" rel="noopener"><code>splunklib.ai</code></a> agent framework (newly released in <code>splunk-sdk-python</code> v3.0.0 on May 12, 2026 — six days before the hackathon kickoff), uses <a href="https://huggingface.co/fdtn-ai/Foundation-Sec-8B" target="_blank" rel="noopener">Foundation-Sec-1.1-8B-Instruct</a> and <code>gpt-oss-20b</code> as <a href="https://www.splunk.com/en_us/products/ai-in-security.html" target="_blank" rel="noopener">Splunk Hosted Models</a>, and calls <code>saia_explain_spl</code> from the <a href="https://help.splunk.com/en/splunk-cloud-platform/search/splunk-ai-assistant-for-spl/1.4.0/use-splunk-ai-assistant-for-spl/personalization-in-splunk-ai-assistant-for-spl" target="_blank" rel="noopener">Splunk AI Assistant for SPL</a> to understand SPL it's never seen before.</p>
+
+  <p>The output is three artifacts:</p>
+
+  <ul>
+    <li>An <strong>agent-readiness score</strong> from 0 to 100, computed per object and rolled up per file and per app.</li>
+    <li>A <strong>unified-diff PR</strong> proposing every description change for human review — Brief never overwrites, it proposes.</li>
+    <li>An <strong>MCP manifest</strong> YAML enumerating which of the app's saved searches should be exposed as agent-callable tools, with descriptions, MITRE tags where relevant, and recommended RBAC scopes.</li>
+  </ul>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §03 ━━━━━━━━━━━━━━ -->
+<section id="s03">
+  <div class="section-num">§ 03 — The pipeline</div>
+  <h2>Four stages, one agent loop.</h2>
+
+  <p>Brief is implemented as a single <code>splunklib.ai</code> Agent with a <code>ToolRegistry</code> containing the parsers, MCP callers, and Hosted Model wrappers it needs. The agent reasons across all four stages within one execution; the stages below describe the logical decomposition, not separate processes.</p>
+
+  <div class="arch-fig">
+    <svg viewBox="0 0 680 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Brief pipeline: Scan, Read SPL, Generate, Emit">
+      <defs>
+        <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#8A8175" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+      <!-- Stage cards -->
+      <g>
+        <rect x="20" y="40" width="140" height="76" rx="6" fill="#FAF7F2" stroke="#B5731E" stroke-width="0.5"/>
+        <text x="90" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#B5731E" letter-spacing="1.2">STAGE 01</text>
+        <text x="90" y="92" text-anchor="middle" font-family="Instrument Serif, serif" font-size="20" font-style="italic" fill="#1A1611">Scan</text>
+        <text x="90" y="106" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="#8A8175">.conf · dashboards</text>
+      </g>
+      <line x1="166" y1="78" x2="190" y2="78" stroke="#8A8175" stroke-width="0.5" marker-end="url(#ar1)"/>
+      <g>
+        <rect x="194" y="40" width="140" height="76" rx="6" fill="#FAF7F2" stroke="#4F6B5C" stroke-width="0.5"/>
+        <text x="264" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#4F6B5C" letter-spacing="1.2">STAGE 02</text>
+        <text x="264" y="92" text-anchor="middle" font-family="Instrument Serif, serif" font-size="20" font-style="italic" fill="#1A1611">Read SPL</text>
+        <text x="264" y="106" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="#8A8175">saia_explain_spl</text>
+      </g>
+      <line x1="340" y1="78" x2="364" y2="78" stroke="#8A8175" stroke-width="0.5" marker-end="url(#ar1)"/>
+      <g>
+        <rect x="368" y="40" width="140" height="76" rx="6" fill="#FAF7F2" stroke="#4F6B5C" stroke-width="0.5"/>
+        <text x="438" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#4F6B5C" letter-spacing="1.2">STAGE 03</text>
+        <text x="438" y="92" text-anchor="middle" font-family="Instrument Serif, serif" font-size="20" font-style="italic" fill="#1A1611">Generate</text>
+        <text x="438" y="106" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="#8A8175">Foundation-Sec</text>
+      </g>
+      <line x1="514" y1="78" x2="538" y2="78" stroke="#8A8175" stroke-width="0.5" marker-end="url(#ar1)"/>
+      <g>
+        <rect x="542" y="40" width="120" height="76" rx="6" fill="#FAF7F2" stroke="#B5731E" stroke-width="0.5"/>
+        <text x="602" y="68" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#B5731E" letter-spacing="1.2">STAGE 04</text>
+        <text x="602" y="92" text-anchor="middle" font-family="Instrument Serif, serif" font-size="20" font-style="italic" fill="#1A1611">Emit</text>
+        <text x="602" y="106" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="#8A8175">score · diff · MCP</text>
+      </g>
+    </svg>
+    <div class="arch-caption">Fig. 1 — The Brief pipeline</div>
+  </div>
+
+  <h3 class="stage">Stage 01</h3>
+  <h4>Scan</h4>
+  <p>Brief parses the app's metadata files (the full priority list lives in §04) and computes four signals per scannable object: <strong>presence</strong> (does a description exist), <strong>quality</strong> (is it more than a tautological restatement of the name — scored by an LLM rubric), <strong>coverage</strong> (what percentage of objects in this file are adequately described), and <strong>safety</strong> (would the search pass MCP guardrails when called: ≤60 seconds, ≤1000 events, no destructive SPL commands).</p>
+
+  <p>The scan runs in either offline mode (a folder on disk: your repo, a Splunkbase package) or live mode (a Splunk instance accessed through the <a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">MCP Server's</a> <code>splunk_get_knowledge_objects</code> tool). Live mode is useful for auditing what's actually deployed in production versus what's checked into the repo — they drift.</p>
+
+  <h3 class="stage">Stage 02</h3>
+  <h4>Read SPL</h4>
+  <p>For each saved search that lacks an adequate description, Brief invokes <code>saia_explain_spl</code> from the <a href="https://help.splunk.com/en/splunk-cloud-platform/search/splunk-ai-assistant-for-spl/1.4.0/use-splunk-ai-assistant-for-spl/personalization-in-splunk-ai-assistant-for-spl" target="_blank" rel="noopener">Splunk AI Assistant for SPL</a>. This returns a structured explanation of the search: which indexes are queried, which sourcetypes are filtered, which fields are extracted, which transformations applied, and what the output table looks like.</p>
+
+  <p>Macro references (backtick-delimited identifiers like <code>`internal_assets`</code>) are expanded inline before the explanation is requested, so the explanation reflects the full search the agent would actually run, not a fragment.</p>
+
+  <h3 class="stage">Stage 03</h3>
+  <h4>Generate</h4>
+  <p>With the SPL explanation as grounding context, Brief invokes a <a href="https://www.splunk.com/en_us/products/ai-in-security.html" target="_blank" rel="noopener">Splunk Hosted Model</a> — <a href="https://huggingface.co/fdtn-ai/Foundation-Sec-8B" target="_blank" rel="noopener">Foundation-Sec-1.1-8B-Instruct</a> for security-classified apps, <code>gpt-oss-20b</code> for general/observability apps — and requests a structured description matching a Pydantic schema. <code>splunklib.ai</code>'s structured output support enforces the schema; malformed outputs are auto-retried.</p>
+
+  <pre><code>class GeneratedDescription(BaseModel):
+    description: str           # 80–240 chars
+    primary_use_case: str
+    output_fields: list[str]
+    mitre_techniques: list[str] | None   # security apps only
+    estimated_runtime: Literal["fast", "medium", "slow"]
+    suitable_for_agent: bool</code></pre>
+
+  <p>Foundation-Sec is chosen for security apps because it was <a href="https://www.splunk.com/en_us/blog/security/foundation-sec-8b.html" target="_blank" rel="noopener">trained on 5 billion tokens of security data</a> including <a href="https://attack.mitre.org/" target="_blank" rel="noopener">MITRE ATT&amp;CK</a> technique reasoning and threat actor profiles. It produces dramatically better descriptions for security saved searches than a general-purpose model — and crucially, it surfaces accurate MITRE technique tags as a side effect, which makes the resulting MCP manifest more useful to downstream calling agents.</p>
+
+  <h3 class="stage">Stage 04</h3>
+  <h4>Emit</h4>
+  <p>Three artifacts land in the output directory:</p>
+  <ul>
+    <li>A <strong>readiness report</strong> (HTML + JSON) showing the score breakdown per object, per file, and per app.</li>
+    <li>A <strong>unified-diff PR file</strong> against the app's <code>.conf</code> files. Standard <code>git apply</code>-compatible diff. Every change is human-reviewable before merge — Brief proposes, you approve.</li>
+    <li>An <strong>MCP manifest YAML</strong> (<code>mcp_manifest.yaml</code>) consumed by the Splunk MCP Server, enumerating the app's agent-callable saved searches with descriptions, output fields, MITRE tags, and recommended RBAC roles.</li>
+  </ul>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §04 ━━━━━━━━━━━━━━ -->
+<section id="s04">
+  <div class="section-num">§ 04 — What Brief scans</div>
+  <h2>The agent-callable surface, mapped.</h2>
+
+  <p>Not every file in a Splunk app affects what an AI agent can do. Brief reads in priority order:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Why it matters</th>
+        <th>Priority</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>savedsearches.conf</code></td>
+        <td>Every stanza is a candidate tool exposed through <code>splunk_run_saved_search</code>. Description quality determines whether agents call it.</td>
+        <td><span class="tag amber">Primary</span></td>
+      </tr>
+      <tr>
+        <td><code>macros.conf</code></td>
+        <td>Reusable SPL fragments composed into saved searches. Brief expands every macro reference inline.</td>
+        <td><span class="tag amber">Primary</span></td>
+      </tr>
+      <tr>
+        <td><code>app.manifest</code> · <code>app.conf</code></td>
+        <td>The app's identity. Agents use the top-level description to decide whether to explore at all.</td>
+        <td><span class="tag amber">Primary</span></td>
+      </tr>
+      <tr>
+        <td><code>metadata/default.meta</code></td>
+        <td>RBAC. Brief flags any object the standard <code>mcp_user</code> role can't reach.</td>
+        <td><span class="tag amber">Primary</span></td>
+      </tr>
+      <tr>
+        <td><code>data/ui/views/*.xml</code></td>
+        <td>Dashboard panels embed searches that never made it to <code>savedsearches.conf</code>. Brief proposes promoting them.</td>
+        <td><span class="tag">Secondary</span></td>
+      </tr>
+      <tr>
+        <td><code>eventtypes.conf</code> · <code>tags.conf</code></td>
+        <td>Semantic event classification. Agents reason in these vocabularies for cross-app discovery.</td>
+        <td><span class="tag">Secondary</span></td>
+      </tr>
+      <tr>
+        <td><code>transforms.conf</code> · <code>lookups/</code></td>
+        <td>Field extractions and lookup tables. Field names need to read like English for agents to construct meaningful queries.</td>
+        <td><span class="tag">Secondary</span></td>
+      </tr>
+      <tr>
+        <td><code>commands.conf</code></td>
+        <td>Custom SPL commands the app adds to the engine. Agents need descriptions to know when to use them.</td>
+        <td><span class="tag">Secondary</span></td>
+      </tr>
+      <tr>
+        <td><code>bin/</code> · <code>.py</code> · README · CSV payloads</td>
+        <td>Implementation, not metadata. Brief never modifies code.</td>
+        <td><span class="tag">Skipped</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="callout-label">Why not just regex for missing descriptions?</div>
+    A regex can find <em>empty</em> description fields. It can't tell you that <code>description = "auth search"</code> is a tautology that gives the agent no actionable information. The quality signal — the difference between a present description and a useful one — is what makes Brief LLM-shaped rather than parser-shaped.
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §05 ━━━━━━━━━━━━━━ -->
+<section id="s05">
+  <div class="section-num">§ 05 — What Brief outputs</div>
+  <h2>Three artifacts. One source of truth.</h2>
+
+  <h3>The agent-readiness score</h3>
+  <p>A composite 0–100 number with this weighting:</p>
+  <ul>
+    <li><strong>Presence (40%)</strong> — does a description exist?</li>
+    <li><strong>Quality (30%)</strong> — is it more than a tautology, scored 0–10 against an LLM rubric?</li>
+    <li><strong>Coverage (20%)</strong> — what fraction of scannable objects in this file are described?</li>
+    <li><strong>Safety (10%)</strong> — would the search pass MCP guardrails (runtime, event limit, no destructive SPL)?</li>
+  </ul>
+  <p>The score is directionally meaningful, not exact. A 14% → 92% improvement is the kind of headline number that makes the demo land.</p>
+
+  <h3>The diff PR</h3>
+  <p>A standard unified diff (<code>git apply</code>-compatible) against the app's <code>.conf</code> files. Brief never overwrites; it proposes. Every change is human-reviewable in a git PR before merge. This matters for trust — Foundation-Sec might write a description that is technically accurate but misses the original author's intended use case.</p>
+
+  <h3>The MCP manifest</h3>
+  <p>A YAML file (<code>mcp_manifest.yaml</code>) listing every agent-callable saved search, its description, expected inputs, output fields, MITRE tags where applicable, and recommended RBAC scope. This manifest is consumed at app-install time by the Splunk MCP Server — it is the contract between an app and the agent ecosystem.</p>
+
+  <pre><code>app: TA_security_monitoring
+tools:
+  - name: get_failed_auth_24h
+    saved_search: get_failed_auth_24h
+    description: |
+      Returns count of failed Linux SSH logins (event 4625) by user and
+      source IP in the last 24 hours. Use for credential stuffing or
+      brute force investigations.
+    output_fields: [user, src_ip, count]
+    mitre_techniques: [T1110.001, T1078]
+    rbac_role: mcp_user
+    estimated_runtime: fast</code></pre>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §06 ━━━━━━━━━━━━━━ -->
+<section id="s06">
+  <div class="section-num">§ 06 — The Splunk AI stack</div>
+  <h2>Four capabilities, one agent.</h2>
+
+  <p>Brief leverages every primary surface in Splunk's announced 2026 AI roadmap. This is deliberate: the more of Splunk's surface area the build touches, the stronger the Technological Implementation score (the hackathon's first tiebreaker criterion).</p>
+
+  <dl>
+    <dt>splunklib.ai (v3.0.0)</dt>
+    <dd>The agent loop. Brief instantiates a single <code>Agent</code> with a <code>ToolRegistry</code> containing parsing utilities, MCP tool callers, and Hosted Model wrappers. The agent runs to completion within default <code>AgentLimits</code> (max_tokens=200000, max_steps=100, timeout=600s). Released May 12, 2026 — six days before hackathon kickoff. Requires Python 3.13. Two breaking-change pitfalls to internalize: agent state is tracked via <code>Agent.messages</code>, not the older <code>.response</code> attribute (renamed in <a href="https://github.com/splunk/splunk-sdk-python/pull/743" target="_blank" rel="noopener">PR #743</a>); and token/step/timeout middlewares live in <code>splunklib.ai.limits</code>, not <code>splunklib.ai.hooks</code> (moved in <a href="https://github.com/splunk/splunk-sdk-python/pull/759" target="_blank" rel="noopener">PR #759</a>). <a href="https://github.com/splunk/splunk-sdk-python" target="_blank" rel="noopener">Repository →</a></dd>
+
+    <dt>Splunk MCP Server (v1.1.2)</dt>
+    <dd>Both the data source (Brief calls <code>splunk_get_knowledge_objects</code> and <code>splunk_get_metadata</code> in live mode) and the deployment target (Brief emits an MCP manifest the server consumes). GA February 4, 2026. Authenticates via encrypted bearer tokens generated from inside the MCP Server app — the legacy Settings → Tokens path has been deprecated since v1.0.0. OAuth 2.1 in v1.1.0 is a <em>closed</em> preview restricted to Splunk Cloud Platform customers, requires Twix 10.3.2512.X, and needs ~1 week of Splunk Identity Service coordination to enable — <strong>do not</strong> rely on it for the hackathon. Static bearer tokens are the supported path. <a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">Splunkbase listing →</a></dd>
+
+    <dt>Splunk Hosted Models</dt>
+    <dd>Foundation-Sec-1.1-8B-Instruct for security apps, gpt-oss-20b for general apps. GA February 18, 2026. <strong>Available exclusively on Splunk Cloud Platform.</strong> Brief's CLI and GitHub Action modes therefore ship with a local inference adapter (Ollama hosting Llama-3.1-8B-Instruct) as a mandatory offline fallback — Foundation-Sec itself is a continuously pre-trained Llama-3.1-8B variant, so a local Llama base preserves architectural symmetry even when the cloud model isn't reachable. <a href="https://www.splunk.com/en_us/products/ai-in-security.html" target="_blank" rel="noopener">Capability page →</a></dd>
+
+    <dt>Splunk AI Assistant for SPL</dt>
+    <dd>Brief calls <code>saia_explain_spl</code> once per undescribed saved search, grounding the generation step in what the SPL actually does rather than what it textually looks like. This offloads the error-prone task of SPL parsing to a purpose-built Splunk component — macros are expanded inline before invocation so the explanation reflects the full search the agent would actually run. <a href="https://help.splunk.com/en/splunk-cloud-platform/search/splunk-ai-assistant-for-spl/1.4.0/use-splunk-ai-assistant-for-spl/personalization-in-splunk-ai-assistant-for-spl" target="_blank" rel="noopener">Documentation →</a></dd>
+  </dl>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §07 ━━━━━━━━━━━━━━ -->
+<section id="s07">
+  <div class="section-num">§ 07 — Architecture</div>
+  <h2>How the parts fit.</h2>
+
+  <div class="arch-fig">
+    <svg viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Brief architecture: agent in the center, inputs on the left, Splunk AI tools at the top, outputs on the right">
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#8A8175" stroke-width="1.5" stroke-linecap="round"/>
+        </marker>
+      </defs>
+
+      <!-- Center: Brief agent -->
+      <rect x="270" y="140" width="140" height="64" rx="6" fill="#F8F2E6" stroke="#B5731E" stroke-width="1"/>
+      <text x="340" y="166" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#B5731E" letter-spacing="1.5">BRIEF</text>
+      <text x="340" y="186" text-anchor="middle" font-family="Instrument Serif, serif" font-size="18" font-style="italic" fill="#1A1611">splunklib.ai Agent</text>
+
+      <!-- Top row: Splunk AI tools called by the agent -->
+      <text x="340" y="32" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175" letter-spacing="1.4">SPLUNK AI TOOLS CALLED</text>
+      <rect x="80" y="46" width="160" height="48" rx="4" fill="#FAF7F2" stroke="#4F6B5C" stroke-width="0.5"/>
+      <text x="160" y="68" text-anchor="middle" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">MCP Server</text>
+      <text x="160" y="84" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175">splunk_get_knowledge_objects</text>
+      <rect x="260" y="46" width="160" height="48" rx="4" fill="#FAF7F2" stroke="#4F6B5C" stroke-width="0.5"/>
+      <text x="340" y="68" text-anchor="middle" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">AI Assistant for SPL</text>
+      <text x="340" y="84" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175">saia_explain_spl</text>
+      <rect x="440" y="46" width="160" height="48" rx="4" fill="#FAF7F2" stroke="#4F6B5C" stroke-width="0.5"/>
+      <text x="520" y="68" text-anchor="middle" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">Hosted Models</text>
+      <text x="520" y="84" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175">Foundation-Sec / gpt-oss-20b</text>
+
+      <!-- Arrows from tools to agent -->
+      <line x1="160" y1="96" x2="305" y2="140" stroke="#8A8175" stroke-width="0.5" stroke-dasharray="3 3"/>
+      <line x1="340" y1="96" x2="340" y2="138" stroke="#8A8175" stroke-width="0.5" stroke-dasharray="3 3"/>
+      <line x1="520" y1="96" x2="375" y2="140" stroke="#8A8175" stroke-width="0.5" stroke-dasharray="3 3"/>
+
+      <!-- Left: Inputs -->
+      <text x="80" y="160" text-anchor="start" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175" letter-spacing="1.4">INPUTS</text>
+      <rect x="40" y="170" width="180" height="74" rx="4" fill="#FAF7F2" stroke="#E5DFD3" stroke-width="0.5"/>
+      <text x="50" y="190" font-family="JetBrains Mono, monospace" font-size="11" fill="#1A1611">savedsearches.conf</text>
+      <text x="50" y="206" font-family="JetBrains Mono, monospace" font-size="11" fill="#1A1611">macros.conf</text>
+      <text x="50" y="222" font-family="JetBrains Mono, monospace" font-size="11" fill="#1A1611">dashboards/*.xml</text>
+      <text x="50" y="238" font-family="JetBrains Mono, monospace" font-size="11" fill="#1A1611">default.meta · app.conf</text>
+      <line x1="222" y1="207" x2="266" y2="174" stroke="#8A8175" stroke-width="0.5" marker-end="url(#ar2)"/>
+
+      <!-- Right: Outputs -->
+      <text x="600" y="160" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175" letter-spacing="1.4">OUTPUTS</text>
+      <rect x="460" y="170" width="180" height="74" rx="4" fill="#FAF7F2" stroke="#B5731E" stroke-width="0.5"/>
+      <text x="470" y="190" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">Agent-readiness score</text>
+      <text x="470" y="208" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">Diff PR (unified)</text>
+      <text x="470" y="226" font-family="Geist, sans-serif" font-size="12" font-weight="500" fill="#1A1611">mcp_manifest.yaml</text>
+      <text x="470" y="238" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175">+ HTML readiness report</text>
+      <line x1="414" y1="173" x2="458" y2="207" stroke="#8A8175" stroke-width="0.5" marker-end="url(#ar2)"/>
+
+      <!-- Bottom: deployment shapes -->
+      <text x="340" y="282" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8A8175" letter-spacing="1.4">DEPLOYMENT SHAPES</text>
+      <rect x="80" y="295" width="146" height="32" rx="4" fill="#FAF7F2" stroke="#E5DFD3" stroke-width="0.5"/>
+      <text x="153" y="316" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" fill="#3D332A">Splunk app</text>
+      <rect x="266" y="295" width="146" height="32" rx="4" fill="#FAF7F2" stroke="#E5DFD3" stroke-width="0.5"/>
+      <text x="339" y="316" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" fill="#3D332A">CLI tool</text>
+      <rect x="452" y="295" width="146" height="32" rx="4" fill="#FAF7F2" stroke="#E5DFD3" stroke-width="0.5"/>
+      <text x="525" y="316" text-anchor="middle" font-family="Geist, sans-serif" font-size="13" fill="#3D332A">GitHub Action</text>
+    </svg>
+    <div class="arch-caption">Fig. 2 — Brief sits between Splunk apps and the agent ecosystem that wants to consume them</div>
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §08 ━━━━━━━━━━━━━━ -->
+<section id="s08">
+  <div class="section-num">§ 08 — Operating modes</div>
+  <h2>Three shapes, one core.</h2>
+
+  <h3>As a Splunk app</h3>
+  <p>Brief installs on Splunk Cloud alongside the apps it audits. It uses Splunk's own scheduler to run on a cron and exposes a dashboard showing the readiness score for every other installed app. This is the <em>internal compliance tool</em> shape — a SOC team can install Brief, see which of their installed apps are agent-ready, and prioritize remediation.</p>
+
+  <h3>As a CLI</h3>
+  <p>A single Python entrypoint: <code>brief scan path/to/app --output report/</code>. Runs entirely offline against a folder on disk. No Splunk instance required. This is the <em>developer workflow</em> shape — a Splunk app author runs it during development before pushing to Splunkbase.</p>
+
+  <h3>As a GitHub Action</h3>
+  <p>Plugs into existing app-development workflows: <code>uses: brief/brief-action@v1</code> opens a PR with proposed description changes on every pull request. This is the <em>CI/CD</em> shape — agent-readiness becomes part of the merge gate.</p>
+
+  <p>All three shapes share the same core agent. The differences are inputs (filesystem vs. live MCP), outputs (filesystem vs. GitHub API vs. Splunk dashboard), and scheduling (one-shot vs. cron vs. webhook).</p>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §09 ━━━━━━━━━━━━━━ -->
+<section id="s09">
+  <div class="section-num">§ 09 — Why this wins</div>
+  <h2>Track fit, bonus stacking, criteria mapping.</h2>
+
+  <h3>Platform &amp; Developer Experience track</h3>
+  <p>The track description has three sub-clauses. Brief satisfies all three cleanly:</p>
+  <ul>
+    <li><strong>"Enhance the developer experience"</strong> — Brief is <em>for</em> Splunk app developers. It takes the manual metadata-writing work that Splunk's DAS team currently does as free 1-on-1 consulting and automates it.</li>
+    <li><strong>"Automate workflows"</strong> — the entire product is automation: scan app → score readiness → generate descriptions → produce diff PR → emit MCP manifest. Zero manual editing.</li>
+    <li><strong>"Simplify how applications interact with Splunk data and API"</strong> — Brief fixes the metadata layer that determines whether the Splunk MCP Server (the agent-facing API surface) can discover and call an app's saved searches at all.</li>
+  </ul>
+
+  <h3>Three stackable bonus prizes</h3>
+  <p>The hackathon's bonus prizes are explicitly stackable with both the grand prize and the track prize. Brief plausibly captures three of them simultaneously:</p>
+  <ul>
+    <li><strong>Best Use of Splunk Developer Tools</strong> ($1,000) — Brief depends on the bleeding-edge <code>splunklib.ai</code> agent framework (PRs #743, #759, #724 are all relevant), uses AppInspect for safety validation, and ships in both Splunkbase-package and GitHub Action shapes. Most surface area of any plausible submission.</li>
+    <li><strong>Best Use of Splunk MCP Server</strong> ($1,000) — Brief is both an MCP client (calls <code>splunk_get_knowledge_objects</code>, <code>splunk_get_metadata</code>, <code>saia_explain_spl</code>) <em>and</em> a producer of MCP manifests that the server consumes at install time. Few projects will inhabit both sides of the protocol.</li>
+    <li><strong>Best Use of Splunk Hosted Models</strong> ($1,000) — Foundation-Sec-1.1-8B-Instruct is used non-trivially for MITRE technique extraction (security apps), with gpt-oss-20b for general apps. The local fallback adapter pattern also demonstrates production-aware thinking about Cloud-only constraints.</li>
+  </ul>
+  <p>Combined potential: grand prize ($7,000) + track prize ($3,000) + three bonuses ($3,000) = <strong>$13,000</strong> if Brief wins everything plausible. Realistic floor with track prize + one bonus is $4,000.</p>
+
+  <h3>The four judging criteria (equally weighted, tiebreaker order)</h3>
+  <table>
+    <thead>
+      <tr><th>Criterion</th><th>How Brief lands it</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>1. Technological implementation</td>
+        <td>Maximum Splunk surface area — every primary AI capability is in the call graph. <code>splunklib.ai</code> structured output, MCP, Hosted Models, AI Assistant for SPL all integrated.</td>
+      </tr>
+      <tr>
+        <td>2. Design</td>
+        <td>The diff-PR-not-overwrite approach aligns with the judges' explicit prioritization of <em>"projects that keep human-in-the-loop"</em>. Clean before/after readiness-score visualization opens the demo. Diff PR review happens natively in the developer's existing GitHub UI — no black box.</td>
+      </tr>
+      <tr>
+        <td>3. Potential impact</td>
+        <td>Multiplier effect: every Splunk app on Splunkbase becomes more useful overnight. Splunk's own 2026 roadmap (six AI agents) depends on third-party apps being agent-ready at scale.</td>
+      </tr>
+      <tr>
+        <td>4. Quality of idea</td>
+        <td>Genuinely novel — Splunk wrote the problem statement in April 2026 and nobody has shipped a solution. Verified against the full announced roadmap and the open-source ecosystem.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §10 ━━━━━━━━━━━━━━ -->
+<section id="s10">
+  <div class="section-num">§ 10 — The build stack</div>
+  <h2>Concrete dependencies.</h2>
+
+  <dl>
+    <dt>Language</dt>
+    <dd>Python 3.13 (required by <code>splunklib.ai</code> v3.0.0).</dd>
+
+    <dt>Core SDK</dt>
+    <dd><code>splunk-sdk-python</code> v3.0.0 — installs the <code>splunklib.ai</code> agent framework, structured output, tool registry.</dd>
+
+    <dt>MCP runtime</dt>
+    <dd>Splunk MCP Server v1.1.2 (Splunkbase app 7931). Bearer-token authenticated. Required role: <code>mcp_user</code> with <code>mcp_tool_execute</code> capability.</dd>
+
+    <dt>Foundation models</dt>
+    <dd>Foundation-Sec-1.1-8B-Instruct (security apps) and gpt-oss-20b (general apps), accessed through the Splunk Hosted Models endpoint on Splunk Cloud.</dd>
+
+    <dt>SPL understanding</dt>
+    <dd>Splunk AI Assistant for SPL v1.4.0+ — provides <code>saia_explain_spl</code> as an MCP tool.</dd>
+
+    <dt>Safety validation</dt>
+    <dd><a href="https://dev.splunk.com/enterprise/reference/appinspect/" target="_blank" rel="noopener">AppInspect</a> Python library for validating generated descriptions against Splunk packaging standards.</dd>
+
+    <dt>Test dataset</dt>
+    <dd><a href="https://github.com/splunk/botsv3" target="_blank" rel="noopener">BOTSv3</a> for end-to-end demo with real security data. A handful of popular Splunkbase apps as target audit subjects.</dd>
+
+    <dt>Parsing</dt>
+    <dd><code>configparser</code> stdlib for <code>.conf</code> files, <code>lxml</code> for dashboard XML, <code>pyyaml</code> for manifest emission.</dd>
+
+    <dt>Diff generation</dt>
+    <dd>Python stdlib <code>difflib.unified_diff</code> — no external dependency needed.</dd>
+
+    <dt>CLI</dt>
+    <dd><code>click</code> or <code>typer</code> for the command-line surface.</dd>
+  </dl>
+
+  <div class="callout">
+    <div class="callout-label">License application timeline</div>
+    The Splunk Enterprise 60-day trial expires July 17 — winners-announcement day. Apply for the Splunk Developer License within the first 7 days to extend to 6 months. Apply for the Splunk Cloud trial separately and immediately, since Hosted Models access (required for Foundation-Sec) is Cloud-only.
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §11 ━━━━━━━━━━━━━━ -->
+<section id="s11">
+  <div class="section-num">§ 11 — Resolved constraints</div>
+  <h2>What due diligence settled.</h2>
+
+  <p>A second pass of research (documented in the project archive) resolved the open questions from the spec phase. The answers below dictate concrete architectural decisions Brief carries from week one.</p>
+
+  <dl>
+    <dt>Foundation-Sec callability outside Splunk Cloud</dt>
+    <dd><strong>Confirmed Cloud-only.</strong> Splunk Hosted Models are documented as available exclusively on Splunk Cloud Platform; calls happen internally via the <code>ai</code> SPL command or the ML-SPL API within the cloud tenant. Brief's CLI and GitHub Action modes therefore <em>must</em> ship a local inference adapter. Ollama hosting Llama-3.1-8B-Instruct is the chosen fallback; Foundation-Sec is itself a Llama-3.1-8B continual-pretrain, so the offline base preserves architectural shape.</dd>
+
+    <dt><code>splunk_run_saved_search</code> beta stability</dt>
+    <dd><strong>Beta; structurally resilient anyway.</strong> The tool was introduced in April 2026 and is provided "as is" without service-level guarantees. Because Brief emits an abstracted <code>mcp_manifest.yaml</code> rather than hard-coding tool invocations, a schema shift during the hackathon window requires only updating the YAML emission template in Stage 4 — the core agent loop is unaffected.</dd>
+
+    <dt>AppInspect rules for description quality</dt>
+    <dd><strong>No native rule exists.</strong> AppInspect validates structural correctness (packaging, syntax, dependency versions — e.g., it will throw a fatal on outdated SDK bindings like v1.6.6 instead of v1.7.3+). It has no LLM-based semantic quality check. Brief's LLM-rubric scoring is therefore novel, not redundant. Future upstream contribution to AppInspect is a roadmap item worth surfacing in the README — judges will read it as forward-looking ecosystem thinking.</dd>
+
+    <dt>RBAC propagation in live mode</dt>
+    <dd><strong>Depends on per-app metadata.</strong> <code>splunk_get_knowledge_objects</code> respects standard Splunk RBAC; a service account with <code>mcp_user</code> + <code>mcp_tool_execute</code> can only enumerate objects whose <code>default.meta</code> permissions admit that role. For Brief's Splunk app deployment shape, the service account should run with <code>sc_admin</code> + <code>mcp_tool_admin</code> to ensure comprehensive cross-app audit. CLI and Action modes operate on local filesystems so this constraint doesn't apply.</dd>
+
+    <dt>Demo target app</dt>
+    <dd>Any older Technology Add-on (TA-*) on Splunkbase with sparse description coverage qualifies. The demo prep step in the build plan picks one based on a quick agent-readiness reconnaissance score across candidate TAs.</dd>
+  </dl>
+
+  <div class="callout">
+    <div class="callout-label">Downstream complement</div>
+    The Splunk Threat Research Team (STRT) recently published a TA that parses JSON-RPC output from MCP Servers for security monitoring. Brief's standardized manifests feed cleanly into that observability layer — generated metadata flows into the JSON-RPC logs the STRT TA analyzes. Mention this in the README and the demo video as ecosystem fit.
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §12 ━━━━━━━━━━━━━━ -->
+<section id="s12">
+  <div class="section-num">§ 12 — Resources</div>
+  <h2>The index.</h2>
+
+  <div class="resources">
+
+    <div class="resource-group">
+      <h4>The hackathon</h4>
+      <ul>
+        <li><a href="https://splunk-agentic-ops.devpost.com/" target="_blank" rel="noopener">Splunk Agentic Ops Hackathon on Devpost</a></li>
+        <li><a href="https://devpost.com/about" target="_blank" rel="noopener">Devpost participation rules</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Splunk's "Agent-Ready" directive</h4>
+      <ul>
+        <li><a href="https://community.splunk.com/t5/Product-News-Announcements/GA-Splunk-MCP-Server-Making-Your-Apps-quot-Agent-Ready-quot/ba-p/759935" target="_blank" rel="noopener">GA: Splunk MCP Server — Making Your Apps "Agent-Ready" (April 2026)</a></li>
+        <li><a href="https://dev.splunk.com/" target="_blank" rel="noopener">Splunk Developer Program (DAS team enrollment)</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Splunk MCP Server</h4>
+      <ul>
+        <li><a href="https://splunkbase.splunk.com/app/7931" target="_blank" rel="noopener">Splunkbase listing — Splunk MCP Server</a></li>
+        <li><a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener">Model Context Protocol specification</a></li>
+        <li><a href="https://lantern.splunk.com/" target="_blank" rel="noopener">Splunk Lantern — Automating Investigations with MCP</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>splunklib.ai &amp; the Python SDK</h4>
+      <ul>
+        <li><a href="https://github.com/splunk/splunk-sdk-python" target="_blank" rel="noopener">splunk-sdk-python on GitHub</a></li>
+        <li><a href="https://dev.splunk.com/enterprise/docs/devtools/python/" target="_blank" rel="noopener">Splunk Python SDK documentation</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Splunk Hosted Models</h4>
+      <ul>
+        <li><a href="https://www.splunk.com/en_us/products/ai-in-security.html" target="_blank" rel="noopener">Splunk AI for Security (capability page)</a></li>
+        <li><a href="https://huggingface.co/fdtn-ai/Foundation-Sec-8B" target="_blank" rel="noopener">Foundation-Sec-8B model card on HuggingFace</a></li>
+        <li><a href="https://www.splunk.com/en_us/blog/security/foundation-sec-8b.html" target="_blank" rel="noopener">Introducing Foundation-Sec-8B (Splunk blog)</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Splunk AI Assistant for SPL</h4>
+      <ul>
+        <li><a href="https://help.splunk.com/en/splunk-cloud-platform/search/splunk-ai-assistant-for-spl/1.4.0/use-splunk-ai-assistant-for-spl/personalization-in-splunk-ai-assistant-for-spl" target="_blank" rel="noopener">AI Assistant for SPL documentation</a></li>
+        <li><a href="https://www.splunk.com/en_us/blog/artificial-intelligence/splunk-ai-assistant-for-spl.html" target="_blank" rel="noopener">AI Assistant for SPL v1.1.0 release blog</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>App development &amp; validation</h4>
+      <ul>
+        <li><a href="https://splunk.github.io/addonfactory-ucc-generator/" target="_blank" rel="noopener">UCC Framework documentation</a></li>
+        <li><a href="https://dev.splunk.com/enterprise/reference/appinspect/" target="_blank" rel="noopener">AppInspect API reference</a></li>
+        <li><a href="https://github.com/marketplace/actions/generate-app-build-app-inspect-check-and-splunk-app-utilities" target="_blank" rel="noopener">splunk-app-action (CI/CD reference)</a></li>
+        <li><a href="https://www.splunk.com/en_us/blog/tips-and-tricks/ci-cd-automation-for-splunk-apps-using-github-actions.html" target="_blank" rel="noopener">CI/CD for Splunk apps with GitHub Actions</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Test data &amp; security concepts</h4>
+      <ul>
+        <li><a href="https://github.com/splunk/botsv3" target="_blank" rel="noopener">BOTSv3 sample security dataset</a></li>
+        <li><a href="https://attack.mitre.org/" target="_blank" rel="noopener">MITRE ATT&amp;CK framework</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/event-4625" target="_blank" rel="noopener">Windows Event 4625 (failed logon)</a> — referenced in the demo SPL</li>
+        <li><a href="https://attack.mitre.org/techniques/T1110/001/" target="_blank" rel="noopener">MITRE T1110.001 (brute force / password guessing)</a></li>
+      </ul>
+    </div>
+
+    <div class="resource-group">
+      <h4>Splunk Agentic SOC context (for the framing)</h4>
+      <ul>
+        <li><a href="https://www.splunk.com/en_us/blog/security/splunk-enterprise-security-premier-generally-available.html" target="_blank" rel="noopener">Splunk ES Premier GA (Feb 2026)</a> — the six agents announcement</li>
+        <li><a href="https://www.splunk.com/en_us/products/ai-in-security.html" target="_blank" rel="noopener">AI in Security overview</a></li>
+        <li><a href="https://github.com/splunk/PEAK" target="_blank" rel="noopener">PEAK Threat Hunting Framework (SURGe by Cisco)</a></li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<div class="ornament">✦</div>
+
+<!-- ━━━━━━━━━━━━━━ §13 ━━━━━━━━━━━━━━ -->
+<section id="s13">
+  <div class="section-num">§ 13 — Build plan</div>
+  <h2>Nine steps across four weeks.</h2>
+
+  <p>Each step is a standalone HTML page with its own context, build prompt, and acceptance criteria. Step one establishes accounts, environment, and the master skill document your AI coding agent uses for every subsequent step. Steps two through eight are development phases. Step nine is demo and submission.</p>
+
+  <table>
+    <thead>
+      <tr><th>Week</th><th>Step</th><th>Phase</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1 · days 1–3</td><td><a href="step-1.html">Step 01</a></td><td>Foundations &amp; the master skill</td></tr>
+      <tr><td>1 · days 4–7</td><td><a href="step-2.html">Step 02</a></td><td>Scanner — the parsing layer</td></tr>
+      <tr><td>2 · days 1–2</td><td><a href="step-3.html">Step 03</a></td><td>SPL comprehension</td></tr>
+      <tr><td>2 · days 3–5</td><td><a href="step-4.html">Step 04</a></td><td>Description generation</td></tr>
+      <tr><td>2 · day 6 — 3 · day 2</td><td><a href="step-5.html">Step 05</a></td><td>Scoring &amp; output artifacts</td></tr>
+      <tr><td>3 · days 3–4</td><td><a href="step-6.html">Step 06</a></td><td>CLI deployment shape</td></tr>
+      <tr><td>3 · days 5–7</td><td><a href="step-7.html">Step 07</a></td><td>Splunk app deployment shape</td></tr>
+      <tr><td>4 · days 1–2</td><td><a href="step-8.html">Step 08</a></td><td>GitHub Action deployment shape</td></tr>
+      <tr><td>4 · days 3–7</td><td><a href="step-9.html">Step 09</a></td><td>Demo, README, submission</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top: 28px;"><a href="step-1.html">→ Begin with Step 01</a></p>
+</section>
+
+<!-- ━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━ -->
+<footer>
+  <p>Brief · build specification · v1.0</p>
+  <p>Compiled May 18, 2026 · 28 days before submission</p>
+  <p>Submission deadline: June 15, 2026 · 09:00 PDT</p>
+</footer>
+
+</div>
+</body>
+</html>

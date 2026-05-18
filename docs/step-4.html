@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 04 — Description generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-3.html">← Step 03</a>
+  <div class="center">Step 04 of 09</div>
+  <a href="step-5.html">Step 05 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 2 · Days 3–5 · May 27–29, 2026</div>
+  <h1 class="display">Step Four<span class="period">.</span></h1>
+  <p class="subtitle">Description generation — turn structured SPL explanations into agent-callable metadata.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>Step 02 enumerates objects. Step 03 explains their SPL. Step 04 turns those explanations into the actual descriptions Splunk's MCP Server will serve to calling agents. This is also where the <code>splunklib.ai</code> Agent is finally assembled — the parsing tools, SPL explainer, and generators are registered as a unified <code>ToolRegistry</code>.</p>
+  <p>Two backend paths: <strong>Splunk Hosted Models</strong> (Foundation-Sec-1.1-8B-Instruct for security apps, gpt-oss-20b for general apps) when running on Splunk Cloud, and <strong>Ollama with Llama-3.1-8B-Instruct</strong> when running offline.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 04 delivers.</h2>
+  <ul>
+    <li>The Pydantic <code>GeneratedDescription</code> schema enforced via <code>splunklib.ai</code> structured output</li>
+    <li>A Hosted Models adapter calling Foundation-Sec / gpt-oss-20b via Splunk Cloud's inference endpoint</li>
+    <li>An Ollama adapter producing schema-compliant output offline</li>
+    <li>App classification heuristic (security vs general) so the right model is picked</li>
+    <li>The full <code>splunklib.ai</code> Agent assembled with its <code>ToolRegistry</code> and run end-to-end on a fixture TA</li>
+    <li>A description-quality LLM rubric for the quality signal (deferred until now because it needs a generation backend)</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Critical reminders before starting: agent state is `Agent.messages` (PR #743). Limits live in `splunklib.ai.limits`, not `.hooks` (PR #759). `id` is required on tool calls (PR #724). Hosted Models are Splunk Cloud only — your CLI / Action paths use Ollama.
+
+Build Brief's generation layer — Stage 3 of the pipeline.
+
+<strong>Files to create</strong>
+
+<em>src/brief/generator/schema.py</em>
+The Pydantic schema enforced on every generated description:
+```python
+class GeneratedDescription(BaseModel):
+    description: str = Field(min_length=80, max_length=240)
+    primary_use_case: str = Field(max_length=120)
+    output_fields: list[str]
+    mitre_techniques: list[str] | None = None
+    estimated_runtime: Literal["fast", "medium", "slow"]
+    suitable_for_agent: bool
+    reasoning: str = Field(max_length=300)
+```
+
+Plus a `QualityRubric(BaseModel)` for evaluating existing descriptions:
+```python
+class QualityRubric(BaseModel):
+    quality_score: int = Field(ge=0, le=10)
+    is_tautology: bool          # "auth search" describing get_auth — yes
+    specifies_data_source: bool # mentions index/sourcetype/event_id
+    specifies_use_case: bool    # mentions when to call it
+    actionable: bool            # an agent could decide based on this
+    reasoning: str
+```
+
+<em>src/brief/generator/prompts.py</em>
+Two prompt templates:
+1. `GENERATE_DESCRIPTION_PROMPT` — instructs the model to produce a `GeneratedDescription` from an `SPLExplanation`. Critical instructions: lead with verb, name event IDs / indexes if mentioned in explanation, state canonical use case, put MITRE techniques in the field not the prose, avoid hedging.
+2. `EVALUATE_QUALITY_PROMPT` — instructs the model to score an existing description against the `QualityRubric`.
+
+Keep prompts under 500 tokens each. Test them iteratively.
+
+<em>src/brief/generator/hosted.py</em>
+Splunk Hosted Models adapter. Uses `splunklib.ai` to call:
+- `Foundation-Sec-1.1-8B-Instruct` for security-classified apps
+- `gpt-oss-20b` for general apps
+
+Public functions:
+- `generate_description_hosted(explanation: SPLExplanation, model_id: str) -> GeneratedDescription`
+- `evaluate_quality_hosted(description: str, explanation: SPLExplanation, model_id: str) -> QualityRubric`
+
+Both use Pydantic schema-guided output via `splunklib.ai`'s structured output support. On schema validation failure, the SDK auto-retries — let it.
+
+<em>src/brief/generator/local.py</em>
+Ollama adapter using the same signatures. Uses `llama3.1:8b-instruct` and Ollama's JSON mode with Pydantic schema validation. Returns the same `GeneratedDescription` and `QualityRubric` types so downstream code is backend-agnostic.
+
+<em>src/brief/generator/classifier.py</em>
+Lightweight rule-based app classifier. Public function: `classify_app(report: AppScanReport) -> Literal["security", "general"]`. Heuristic:
+- Check `app.conf` description for keywords: "security", "threat", "SOC", "SIEM", "compliance"
+- Scan saved searches for security indexes: `wineventlog`, `linux_secure`, `netflow`, `firewall`, `proxy`, `dns_query`
+- Scan eventtypes/tags for MITRE-style names: `attack`, `breach`, `intrusion`
+- Default to "general" if no signals
+
+Returns the classification so the orchestrator picks the right model.
+
+<em>src/brief/generator/__init__.py</em>
+Unified entry point:
+- `generate(explanation: SPLExplanation, mode: Literal["live", "offline"], app_class: str) -> GeneratedDescription`
+- `evaluate(description: str, explanation: SPLExplanation, mode: str, app_class: str) -> QualityRubric`
+
+<em>src/brief/agent.py</em>
+The <strong>full splunklib.ai Agent</strong> assembled here. This is the orchestrator that runs Stages 1→4 in one execution.
+
+```python
+from splunklib.ai import Agent, ToolRegistry, AgentLimits
+
+def build_brief_agent(mode: str, app_class: str) -> Agent:
+    registry = ToolRegistry()
+    registry.register("scan_app", scanner.scan_app)
+    registry.register("expand_macros", macro_expander.expand)
+    registry.register("explain_spl", spl.explain)
+    registry.register("generate_description", generator.generate)
+    registry.register("evaluate_quality", generator.evaluate)
+
+    limits = AgentLimits(
+        max_tokens=200_000,
+        max_steps=100,
+        timeout=600,
+    )
+
+    return Agent(
+        tools=registry,
+        limits=limits,
+        # state tracked via .messages, not .response (PR #743)
+    )
+```
+
+Public entry: `audit_app(path: Path, mode: str) -> tuple[AppScanReport, dict[object_name, GeneratedDescription]]`. This is the one-call orchestrator the CLI will use.
+
+<strong>Constraints</strong>
+- <strong>DO NOT</strong> emit any output artifacts yet — diff, manifest, report all come in Step 05
+- <strong>DO NOT</strong> implement live MCP <em>writes</em> back to Splunk — Brief never writes to a running Splunk in live mode, only reads
+- Schema validation failures retry automatically via splunklib.ai — don't catch them as errors
+- For Hosted Models: tokens come from environment, never logged
+- For Ollama: assume `localhost:11434` with `llama3.1:8b-instruct` already pulled (Step 01 set this up)
+
+<strong>Testing</strong>
+- Unit test schema enforcement: feed garbage to the schema, assert ValidationError
+- Mock Ollama responses with fixture JSON; test the parsing path
+- Integration test: run `audit_app()` end-to-end on the Step 02 fixture TA in offline mode. Assert that for each undescribed saved search, a `GeneratedDescription` with ≥80 chars is produced.
+- Quality rubric test: feed it a known-tautological description ("auth search"); assert `is_tautology=True` and `quality_score &lt; 4`.
+
+<strong>Acceptance</strong>
+- The Agent runs to completion within 5 minutes on a 30-saved-search TA in offline mode
+- Generated descriptions consistently lead with a verb (manually inspect 10)
+- MITRE techniques are populated for security-classified apps (manually verify 3)
+- The Hosted Models path works against your Splunk Cloud trial — defer if Cloud provisioning is still pending</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 04 is done.</h2>
+  <ul>
+    <li><code>audit_app()</code> runs end-to-end in offline mode on the fixture TA, producing valid <code>GeneratedDescription</code> objects</li>
+    <li>App classifier correctly tags your fixture TA</li>
+    <li>Quality rubric distinguishes good from tautological descriptions (eyeball test on 5 examples)</li>
+    <li>Hosted Models path is implemented and tested against Splunk Cloud (or stubbed with a clear TODO if Cloud isn't yet provisioned)</li>
+    <li>Agent state is correctly tracked via <code>.messages</code> — verify by inspecting the agent run trace</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s03">§03 — The pipeline</a>, Stage 03</li>
+    <li><a href="brief-spec.html#s06">§06 — The Splunk AI stack</a>, splunklib.ai entry</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-3.html">← Step 03</a>
+  <div class="center">Step 04 complete · onward</div>
+  <a href="step-5.html">Step 05 — Scoring &amp; outputs →</a>
+</nav>
+
+</div>
+</body>
+</html>

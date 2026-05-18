@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 08 — GitHub Action deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-7.html">← Step 07</a>
+  <div class="center">Step 08 of 09</div>
+  <a href="step-9.html">Step 09 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 4 · Days 1–2 · June 8–9, 2026</div>
+  <h1 class="display">Step Eight<span class="period">.</span></h1>
+  <p class="subtitle">Brief as a GitHub Action — agent-readiness becomes part of the pull-request merge gate.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>The CLI runs locally. The Splunk app runs inside Splunk Cloud. The third deployment shape closes the loop: a GitHub Action that runs on every pull request to a Splunk app repository, auto-opening a follow-up PR with proposed description changes if the readiness score drops below a configurable threshold.</p>
+  <p>This is the <em>CI/CD shape</em>. It makes agent-readiness a code-review concern, not an afterthought. Combined with the diff-PR design, it lets human reviewers see exactly what Brief proposes — a perfect alignment with the judges' explicit "human-in-the-loop" prioritization.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 08 delivers.</h2>
+  <ul>
+    <li>An <code>action.yml</code> defining inputs, outputs, and execution</li>
+    <li>A <code>Dockerfile</code> containerizing Brief with Python 3.13 + Ollama for offline inference</li>
+    <li>PR auto-opening logic using the GitHub REST API</li>
+    <li>A PR comment summarizing the readiness score and key changes</li>
+    <li>A working test repo demonstrating the Action in use</li>
+    <li>Marketplace-ready packaging (icon, README, branding)</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Build Brief as a GitHub Action — the CI/CD deployment shape.
+
+<strong>Files to create</strong>
+
+<em>action.yml</em> (repo root)
+```yaml
+name: 'Brief — Splunk Agent-Readiness Audit'
+description: 'Audit a Splunk app for AI-agent-readiness on every PR.'
+author: '<your name>'
+branding:
+  icon: 'check-circle'
+  color: 'orange'
+
+inputs:
+  target-path:
+    description: 'Path to the Splunk app to audit (relative to repo root)'
+    required: true
+    default: '.'
+  model-backend:
+    description: 'Which model backend to use: hosted (Splunk Cloud) or local (Ollama)'
+    required: false
+    default: 'local'
+  output-dir:
+    description: 'Where to write artifacts'
+    required: false
+    default: 'brief-output'
+  open-pr:
+    description: 'Auto-open a follow-up PR with proposed description changes'
+    required: false
+    default: 'true'
+  fail-below-score:
+    description: 'Fail the action if readiness score is below this threshold'
+    required: false
+    default: '70'
+  splunk-mcp-url:
+    description: 'Optional Splunk MCP Server URL (hosted backend only)'
+    required: false
+  splunk-mcp-token:
+    description: 'Optional Splunk MCP Server bearer token (hosted backend only)'
+    required: false
+
+outputs:
+  score:
+    description: 'Overall agent-readiness score (0-100)'
+  pr-number:
+    description: 'Number of the auto-opened follow-up PR, if any'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+```
+
+<em>Dockerfile</em> (repo root)
+```dockerfile
+FROM python:3.13-slim
+
+# Install Ollama for local inference fallback
+RUN apt-get update && apt-get install -y curl ca-certificates && \
+    curl -fsSL https://ollama.com/install.sh | sh && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Brief
+COPY . /brief/
+WORKDIR /brief/
+RUN pip install --no-cache-dir -e .
+
+# Pre-pull the model so first-run isn't slow
+# Note: this adds ~5GB to image size. Consider lazy pull on first invocation.
+RUN ollama serve & sleep 2 && ollama pull llama3.1:8b-instruct && pkill ollama
+
+ENTRYPOINT ["/brief/scripts/action-entrypoint.sh"]
+```
+
+<em>scripts/action-entrypoint.sh</em>
+```bash
+#!/bin/bash
+set -e
+
+# Start Ollama in background if using local backend
+if [ "$INPUT_MODEL_BACKEND" = "local" ]; then
+    ollama serve &
+    sleep 3
+fi
+
+# Run audit
+brief audit "$INPUT_TARGET_PATH" \
+    --output "$INPUT_OUTPUT_DIR" \
+    --mode "${INPUT_MODEL_BACKEND}" \
+    --output-format json
+
+# Extract score
+SCORE=$(jq -r '.overall_score' "$INPUT_OUTPUT_DIR/score.json")
+echo "score=$SCORE" >> $GITHUB_OUTPUT
+
+# Open follow-up PR if requested
+if [ "$INPUT_OPEN_PR" = "true" ] && [ -s "$INPUT_OUTPUT_DIR/descriptions.diff" ]; then
+    python /brief/scripts/open_pr.py
+fi
+
+# Fail if below threshold
+if (( SCORE < INPUT_FAIL_BELOW_SCORE )); then
+    echo "::error::Readiness score $SCORE is below threshold $INPUT_FAIL_BELOW_SCORE"
+    exit 1
+fi
+```
+
+<em>scripts/open_pr.py</em>
+Python script that:
+1. Reads <code>$INPUT_OUTPUT_DIR/descriptions.diff</code>
+2. Creates a new branch <code>brief/auto-update-$(date +%s)</code>
+3. Applies the diff to the branch
+4. Pushes the branch
+5. Opens a PR via the GitHub REST API with:
+   - Title: <code>Brief: agent-readiness improvements ($SCORE → projected $PROJECTED)</code>
+   - Body: a markdown summary of changes, the readiness report excerpt, and a link to the HTML report (uploaded as an artifact)
+6. Adds a comment to the original PR with: <code>Brief score: $SCORE/100. See follow-up PR #$NEW_PR.</code>
+
+Uses <code>GITHUB_TOKEN</code> from the action environment. Use the official <code>PyGithub</code> library or raw <code>requests</code> against the REST API.
+
+<em>.github/workflows/test-action.yml</em>
+Self-test: in this same repo, run the Action against the <code>tests/fixtures/sample-ta-1/</code> fixture on every PR. Catches regressions in the action wiring itself.
+
+<em>examples/sample-repo/</em>
+Optional but recommended: a separate small sample repo with a Splunk app and a workflow file using the Action. Link to this repo from the README. Judges and Splunkbase reviewers will check it.
+
+<em>README.md updates</em>
+Document the Action's usage prominently:
+```yaml
+# Example .github/workflows/audit.yml in a Splunk app repo
+on:
+  pull_request:
+    paths: ['**.conf', '**/views/*.xml']
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: <you>/brief@v1
+        with:
+          target-path: '.'
+          fail-below-score: 70
+```
+
+<strong>Constraints</strong>
+- The Action container image must stay under reasonable size for CI (target: under 8 GB including Ollama + Llama-3.1-8B)
+- Never log the GITHUB_TOKEN or any Splunk credentials
+- The Action must handle the case where there are no changes (empty diff) gracefully — exit 0 with a message
+- Use the GITHUB_TOKEN's automatic permissions; never require a custom PAT in the simple case
+
+<strong>Testing</strong>
+- Create a public test repo with a Splunk app, add the workflow file, open a PR
+- Verify the Action runs, posts a comment, opens a follow-up PR
+- Verify the score threshold causes the action to fail when it should
+- Verify the action passes cleanly when score is above threshold
+
+<strong>Acceptance</strong>
+- The Action runs end-to-end on a real test repo
+- A follow-up PR is auto-opened with valid description changes
+- The action.yml is documented well enough that someone reading just the README can use it
+- The Docker image builds successfully on GitHub-hosted runners</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 08 is done.</h2>
+  <ul>
+    <li>End-to-end Action run on a real test repo succeeds and auto-opens a follow-up PR</li>
+    <li>The Docker image builds on GitHub-hosted runners without errors</li>
+    <li>The example workflow YAML in README is copy-pasteable</li>
+    <li>The Action exits with the right code based on the <code>fail-below-score</code> threshold</li>
+    <li>You have a public test repo demonstrating the Action in action — record its URL for the demo</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s08">§08 — Operating modes</a>, GitHub Action shape</li>
+    <li><a href="brief-spec.html#s09">§09 — Why this wins</a>, human-in-the-loop alignment</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-7.html">← Step 07</a>
+  <div class="center">Step 08 complete · onward</div>
+  <a href="step-9.html">Step 09 — Demo &amp; submission →</a>
+</nav>
+
+</div>
+</body>
+</html>

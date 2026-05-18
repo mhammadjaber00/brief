@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 06 — CLI deployment shape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-5.html">← Step 05</a>
+  <div class="center">Step 06 of 09</div>
+  <a href="step-7.html">Step 07 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 3 · Days 3–4 · June 3–4, 2026</div>
+  <h1 class="display">Step Six<span class="period">.</span></h1>
+  <p class="subtitle">The CLI — the first of three deployment shapes, and the one your demo will run against.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>The pipeline works end-to-end via <code>audit_app()</code>. A minimal <code>brief scan</code> stub exists from Step 02. Step 06 polishes that into the production CLI: clean commands, configuration, progress feedback, env-var-based secrets, and a tested end-to-end run on a real Splunkbase TA.</p>
+  <p>The CLI is the deployment shape your 3-minute demo video will most likely feature — it's the fastest path to a compelling "before vs after" visual. Treat its UX accordingly.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 06 delivers.</h2>
+  <ul>
+    <li>Two primary commands: <code>brief scan PATH</code> (Stage 1 only, fast, no LLM) and <code>brief audit PATH</code> (full pipeline, all four stages)</li>
+    <li>A <code>--mode live|offline</code> flag controlling whether the agent uses Hosted Models or Ollama</li>
+    <li>Configuration loading: env vars → <code>.env</code> file → CLI flags (later wins)</li>
+    <li>Rich progress indicators during long-running phases (each saved search explained / generated is one tick)</li>
+    <li>An end-to-end run on a real Splunkbase TA, with the four output artifacts inspected by hand</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Polish the CLI into Brief's primary deployment shape.
+
+<strong>Files to update</strong>
+
+<em>src/brief/cli.py</em>
+Replace the Step 02 stub with a full typer app:
+
+```python
+import typer
+from pathlib import Path
+from typing import Annotated
+
+app = typer.Typer(name="brief", help="Audit Splunk apps for AI-agent-readiness.")
+
+@app.command()
+def scan(
+    path: Annotated[Path, typer.Argument(help="Path to a Splunk app folder")],
+    output: Annotated[Path, typer.Option("--output", "-o")] = Path("./brief-output"),
+    format: Annotated[str, typer.Option("--format", "-f")] = "table",  # table | json
+):
+    """Stage 1 only — fast structural audit, no LLM calls."""
+    ...
+
+@app.command()
+def audit(
+    path: Annotated[Path, typer.Argument(help="Path to a Splunk app folder")],
+    output: Annotated[Path, typer.Option("--output", "-o")] = Path("./brief-output"),
+    mode: Annotated[str, typer.Option("--mode")] = "offline",      # offline | live
+    app_class: Annotated[str, typer.Option("--app-class")] = "auto",  # auto | security | general
+    model: Annotated[str | None, typer.Option("--model")] = None,  # override default model
+    verbose: Annotated[bool, typer.Option("--verbose", "-v")] = False,
+):
+    """Full audit — scan, explain, generate, score, emit."""
+    ...
+```
+
+Both commands must:
+- Validate the input path exists and looks like a Splunk app (contains `default/` or `local/` with `.conf` files)
+- Resolve configuration (env → `.env` → flags)
+- Render a rich progress bar for the long-running stages
+- On completion, print a summary block with: overall score, file locations of the four output artifacts, and a one-line callout (e.g., "Open report.html to review")
+- Exit code 0 on success, 1 on partial failure (some descriptions couldn't be generated), 2 on full failure
+
+<em>src/brief/config.py</em>
+Centralized configuration loading. Use `pydantic-settings`:
+
+```python
+class BriefConfig(BaseSettings):
+    splunk_mcp_url: str | None = None
+    splunk_mcp_token: SecretStr | None = None
+    splunk_cloud_api_key: SecretStr | None = None  # for Hosted Models
+    ollama_url: str = "http://localhost:11434"
+    ollama_model: str = "llama3.1:8b-instruct"
+    output_dir: Path = Path("./brief-output")
+
+    class Config:
+        env_file = ".env"
+        env_prefix = "BRIEF_"
+```
+
+Document the env vars in `README.md`: <code>BRIEF_SPLUNK_MCP_URL</code>, <code>BRIEF_SPLUNK_MCP_TOKEN</code>, etc.
+
+<em>src/brief/cli_helpers.py</em>
+Progress reporting helpers using `rich.progress`. One progress bar per stage with descriptive labels: "Parsing .conf files", "Explaining SPL (X of Y)", "Generating descriptions (X of Y)", "Emitting artifacts".
+
+<strong>End-to-end test</strong>
+
+Pick a real, modestly-sized Splunkbase TA (under 30 saved searches). Suggestions worth checking on Splunkbase:
+- Older TA-* technology add-ons with sparse descriptions
+- TAs that haven't been updated since pre-2024 (likely missing modern metadata)
+
+Download it, unpack into <code>tests/fixtures/real-ta/</code>, and run:
+
+```bash
+brief audit tests/fixtures/real-ta/ --mode offline --verbose
+```
+
+Manually inspect:
+- The overall score in <code>score.json</code>
+- 5 generated descriptions in the diff — do they sound right?
+- The HTML report in a browser — does it look demo-ready?
+- The MCP manifest YAML — does it have the right shape?
+
+If any of these look off, that's the signal to iterate on prompts (in <code>src/brief/generator/prompts.py</code>) before moving to Step 07.
+
+<strong>Constraints</strong>
+- <strong>DO NOT</strong> hardcode any tokens or URLs in source
+- <strong>DO NOT</strong> log secrets, even at verbose level — Pydantic's SecretStr handles this automatically
+- The CLI should work with zero arguments beyond the path (sensible defaults for everything)
+- Live mode failing (e.g., MCP unreachable) should fall back to offline mode with a clear warning, not crash
+
+<strong>Acceptance</strong>
+- <code>brief scan PATH</code> runs in under 10 seconds on the real TA
+- <code>brief audit PATH</code> runs in under 5 minutes on the real TA in offline mode
+- The verbose flag produces useful trace output without leaking secrets
+- The end-to-end inspection on a real TA produces visually compelling before/after that you'd be comfortable putting in a demo video</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 06 is done.</h2>
+  <ul>
+    <li><code>brief --help</code> shows clean output with two commands and all flags documented</li>
+    <li>An end-to-end run on a real Splunkbase TA produces all four output artifacts cleanly</li>
+    <li>The HTML report renders well and visibly shows the before/after improvement</li>
+    <li>Configuration via env vars, <code>.env</code> file, and CLI flags all work and override correctly</li>
+    <li>You've identified a specific demo target TA for the 3-minute video — note its name for Step 09</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s08">§08 — Operating modes</a>, CLI shape</li>
+    <li><a href="brief-spec.html#s10">§10 — The build stack</a></li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-5.html">← Step 05</a>
+  <div class="center">Step 06 complete · onward</div>
+  <a href="step-7.html">Step 07 — Splunk app shape →</a>
+</nav>
+
+</div>
+</body>
+</html>

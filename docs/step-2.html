@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brief · Step 02 — Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="brief.css">
+</head>
+<body>
+<div class="container">
+
+<nav class="step-nav">
+  <a href="step-1.html">← Step 01</a>
+  <div class="center">Step 02 of 09</div>
+  <a href="step-3.html">Step 03 →</a>
+</nav>
+
+<header class="step-header">
+  <div class="meta-line">Week 1 · Days 4–7 · May 21–24, 2026</div>
+  <h1 class="display">Step Two<span class="period">.</span></h1>
+  <p class="subtitle">The scanner — parse a Splunk app and quantify what an agent could and couldn't see.</p>
+</header>
+
+<section>
+  <div class="section-num">§ Context</div>
+  <h2>Where we are.</h2>
+  <p>Accounts provisioned, environment ready, MCP Server reachable, master skill committed. Step 02 builds Stage 1 of the pipeline: the parsing and signal-extraction layer.</p>
+  <p>No LLM calls yet — this step is deterministic parsing and static analysis. The output is structured data describing every scannable object in a target Splunk app, ready to feed into the SPL-comprehension stage in Step 03.</p>
+</section>
+
+<section>
+  <div class="section-num">§ Goal</div>
+  <h2>What Step 02 delivers.</h2>
+  <ul>
+    <li>A working <code>scan_app(path)</code> function that reads a Splunk app folder and returns a structured report</li>
+    <li>Parsers for <code>.conf</code> files (configparser-based) and dashboard XML (lxml-based)</li>
+    <li>A static SPL safety analyzer enforcing MCP guardrails (runtime, event volume, destructive commands)</li>
+    <li>Per-object signal extraction: presence, description text, safety verdict, raw definition</li>
+    <li>Per-file coverage rollups</li>
+    <li>An end-to-end test running on a real Splunkbase TA committed to <code>tests/fixtures/</code></li>
+    <li>A CLI smoke test: <code>brief scan PATH</code> prints a summary table</li>
+  </ul>
+</section>
+
+<div class="prompt-box">
+  <div class="prompt-label"></div>
+  <div class="prompt-body">Read `skill.md` first. Then build Brief's scanner — Stage 1 of the pipeline. No LLM calls in this step; this is deterministic parsing and static analysis only.
+
+<strong>Files to create</strong>
+
+<em>src/brief/scanner/models.py</em>
+Pydantic models for everything the scanner produces:
+- `ObjectSignals(name, object_type, description_present, description_text, quality_score=None, safety, raw_definition, file_origin)`
+- `SafetyReport(safe: bool, violations: list[str], warnings: list[str])`
+- `FileCoverage(file_name, total_objects, described_count, coverage_pct)`
+- `EmbeddedSearch(dashboard, panel, query)`
+- `AppScanReport(app_name, app_version, app_description, objects, file_coverage, embedded_dashboard_searches)`
+- `object_type` is a Literal of "savedsearch" | "macro" | "eventtype" | "tag" | "transform" | "command"
+
+<em>src/brief/scanner/conf_parser.py</em>
+A `ConfParser` class wrapping Python's `configparser`, with these adaptations for Splunk:
+- Handle the `default/` + `local/` layered config pattern — local stanzas override default at the key level (not stanza level)
+- Stanza inheritance via the implicit `[default]` block
+- Multi-line values (continuation with backslash + indented next line)
+- Comments start with `#`
+- Return `dict[stanza_name, dict[key, value]]`
+
+Files this module should be able to read: `app.conf`, `app.manifest`, `savedsearches.conf`, `macros.conf`, `eventtypes.conf`, `tags.conf`, `transforms.conf`, `commands.conf`. Public method: `parse_file(path: Path) -> dict`.
+
+<em>src/brief/scanner/xml_parser.py</em>
+Uses `lxml` to extract searches from dashboard XML files in `data/ui/views/*.xml`. Public function: `extract_dashboard_searches(views_dir: Path) -> list[EmbeddedSearch]`. Handle both Simple XML (`<search>` elements) and Studio dashboards (JSON-in-XML).
+
+<em>src/brief/scanner/safety.py</em>
+Static SPL guardrail analyzer. Public function: `analyze_spl(spl: str) -> SafetyReport`. Checks:
+- <strong>Destructive commands</strong> — regex for `| delete`, `| outputlookup` (flag as warning unless target is in a known-safe lookup list), `| sendalert`, `| script`, `| outputtext`. Each match becomes a `violations` entry.
+- <strong>Runtime hints</strong> — heuristic: if SPL contains `| join`, `| append`, or `earliest=-30d@d` without `| head N`, flag as `warnings` (probably exceeds 60s).
+- <strong>Event volume</strong> — if SPL has no terminal aggregation (`| stats`, `| chart`, `| timechart`, `| top`, `| rare`) and no `| head N`, flag as warning (probably exceeds 1000 events).
+- <strong>Index breadth</strong> — `index=*` without further filtering is a warning.
+
+The function returns `SafetyReport(safe=len(violations)==0, violations, warnings)`. Warnings don't disqualify but feed into the safety signal score in Step 05.
+
+<em>src/brief/scanner/signals.py</em>
+Per-object signal extraction. For each saved search, macro, etc., produce an `ObjectSignals`. Quality is left as `None` here — Stage 3 fills it. Key rules:
+- `description_present` is True only if the description key exists AND its value is &gt; 10 chars after stripping whitespace
+- `raw_definition` holds the `search = ...` value for saved searches, the `definition = ...` value for macros, etc.
+- `safety` comes from `analyze_spl()` for objects with SPL content
+
+<em>src/brief/scanner/__init__.py</em>
+Public entry point: `scan_app(path: Path) -> AppScanReport`. Orchestrates:
+1. Read `app.manifest` and `app.conf` for app identity
+2. Walk `default/` and `local/` for all .conf files; merge with local-overrides-default
+3. Walk `data/ui/views/` for dashboards
+4. Compute signals per object
+5. Roll up file coverage
+6. Return the report
+
+<em>src/brief/cli.py</em>
+Minimal `typer` app exposing `brief scan PATH [--output DIR]`. For now it just runs `scan_app()` and prints a summary table using `rich`. CLI polish happens in Step 06.
+
+<strong>Constraints</strong>
+- <strong>DO NOT</strong> call any LLMs in this step
+- <strong>DO NOT</strong> generate descriptions yet
+- <strong>DO NOT</strong> touch the live MCP code path yet — offline filesystem only
+- Stay focused — Stages 2, 3, 4 come in subsequent steps. Resist scope creep.
+- Use `pathlib.Path` exclusively, never `os.path` strings
+- Type hints everywhere
+
+<strong>Testing</strong>
+Download a small TA from Splunkbase. Suggested: any TA with under 30 saved searches so iteration is fast. Place it at `tests/fixtures/sample-ta-1/`. Commit it (it's open source, that's fine).
+
+Write `tests/test_scanner.py` with these assertions:
+- `scan_app()` returns an `AppScanReport` without raising
+- The number of saved searches matches what's in `default/savedsearches.conf`
+- At least one description-missing case is detected (most TAs have some)
+- The safety analyzer flags at least one warning across the saved searches
+- File coverage percentages are between 0 and 100
+
+<strong>Acceptance</strong>
+- `pytest tests/test_scanner.py` passes
+- `brief scan tests/fixtures/sample-ta-1/` prints a readable summary
+- Output JSON (writable via `--output`) is well-formed Pydantic serialization
+- No LLM API keys are referenced anywhere in the code (verify with grep)</div>
+</div>
+
+<section>
+  <div class="section-num">§ Acceptance</div>
+  <h2>How you know Step 02 is done.</h2>
+  <ul>
+    <li><code>pytest tests/test_scanner.py</code> green</li>
+    <li><code>brief scan tests/fixtures/sample-ta-1/</code> prints a table showing total objects, described count, coverage % per file, and any safety warnings</li>
+    <li>A sample TA is committed to <code>tests/fixtures/</code> with an upstream attribution note in its README</li>
+    <li>Pydantic models in <code>scanner/models.py</code> are stable and exported — Step 03 will import from them</li>
+    <li>Zero references to any LLM or MCP API in the scanner module — pure offline parsing</li>
+  </ul>
+</section>
+
+<section>
+  <div class="section-num">§ Reference</div>
+  <h2>From the spec.</h2>
+  <ul>
+    <li><a href="brief-spec.html#s03">§03 — The pipeline</a>, Stage 01</li>
+    <li><a href="brief-spec.html#s04">§04 — What Brief scans</a> — the priority table</li>
+  </ul>
+</section>
+
+<nav class="step-nav step-nav-bottom">
+  <a href="step-1.html">← Step 01</a>
+  <div class="center">Step 02 complete · onward</div>
+  <a href="step-3.html">Step 03 — SPL comprehension →</a>
+</nav>
+
+</div>
+</body>
+</html>
