@@ -48,6 +48,18 @@ Items the spec calls for that are intentionally not done yet. Each entry lists w
 - **Why won't-do:** the only workarounds modify Splunk's Python binary (`codesign -fs - /Applications/Splunk/bin/python3`) and risk breaking on Splunk's auto-update. Not worth pursuing for a hackathon when Splunk Cloud (the real target) has no such restriction.
 - **For local Brief demo on Mac:** use the CLI (`brief audit tests/fixtures/sample-ta-1`). It produces identical artifacts to what the Splunk-app shape would emit. Same HTML report, same MCP manifest, same diff.
 
+## Step 08 — GitHub Action shape
+
+### Action runtime verification on GitHub Actions runners
+- **Status:** action files committed (action.yml, Dockerfile, .dockerignore, entrypoint script, open_pr.py, self-test workflow). Local docker build skipped because Docker daemon wasn't running.
+- **Why deferred:** verification needs either a PR to this repo (which triggers `test-action.yml` on `ubuntu-latest`) or manual `workflow_dispatch`. Both are easy but require a human click.
+- **Unblocks:** GitHub Actions → "Self-test the Brief action" → "Run workflow" (workflow_dispatch). Confirm: Docker image builds, Brief audits `tests/fixtures/sample-ta-1/`, `brief-output/` artifact uploads with all four files.
+
+### Marketplace listing
+- **Status:** action.yml has `name`, `description`, `author`, `branding` — Marketplace-ready metadata.
+- **Why deferred:** publishing to the Marketplace requires tagging a release (`v1`), opting in via GitHub's repository settings, and providing a logo. Logo and Step 09 demo screenshots come together.
+- **Unblocks:** create a release tag (`git tag -a v1.0.0 -m "Initial release"; git push --tags`), then in Repository → Releases → "Publish this Action to the GitHub Marketplace". Logo image needed.
+
 ## Step 09 — submission
 
 ### architecture_diagram.png
