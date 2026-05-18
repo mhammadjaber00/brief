@@ -1,0 +1,34 @@
+<dashboard>
+  <label>Security Overview</label>
+  <description>Hand-crafted Simple XML dashboard for Brief's xml_parser tests.</description>
+  <row>
+    <panel>
+      <title>Failed Logins (24h)</title>
+      <chart>
+        <search>
+          <query>index=linux_secure "Failed password" earliest=-24h@h | timechart count</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+        </search>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Top Sourcetypes (30d)</title>
+      <table>
+        <search>
+          <query>index=* earliest=-30d@d | stats count by sourcetype | head 20</query>
+        </search>
+      </table>
+    </panel>
+    <panel>
+      <title>Recent IOC Matches</title>
+      <table>
+        <search>
+          <query>`brief_default_index` | lookup ioc_lookup ioc_value as src_ip OUTPUT threat_actor | where isnotnull(threat_actor) | head 50</query>
+        </search>
+      </table>
+    </panel>
+  </row>
+</dashboard>

@@ -1,0 +1,40 @@
+<dashboard version="2.0" theme="dark">
+  <label>Endpoint Monitoring</label>
+  <definition><![CDATA[
+{
+  "title": "Endpoint Monitoring",
+  "description": "Sysmon-based endpoint dashboard (Studio).",
+  "dataSources": {
+    "ds_processes": {
+      "type": "ds.search",
+      "options": {
+        "query": "index=endpoint sourcetype=sysmon EventCode=1 earliest=-1h | stats count by Image"
+      }
+    },
+    "ds_network": {
+      "type": "ds.search",
+      "options": {
+        "query": "index=endpoint sourcetype=sysmon EventCode=3 earliest=-1h | stats count by DestinationIp | head 25"
+      }
+    }
+  },
+  "visualizations": {
+    "viz_processes": {
+      "type": "splunk.column",
+      "dataSources": { "primary": "ds_processes" }
+    },
+    "viz_network": {
+      "type": "splunk.table",
+      "dataSources": { "primary": "ds_network" }
+    }
+  },
+  "layout": {
+    "type": "absolute",
+    "structure": [
+      { "item": "viz_processes", "type": "block", "position": { "x": 0, "y": 0, "w": 600, "h": 300 } },
+      { "item": "viz_network", "type": "block", "position": { "x": 600, "y": 0, "w": 600, "h": 300 } }
+    ]
+  }
+}
+  ]]></definition>
+</dashboard>
