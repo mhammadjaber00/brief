@@ -29,10 +29,12 @@ jobs:
         uses: ./
         with:
           target-path: 'tests/fixtures/sample-ta-1'
-          mode: 'offline'
+          mode: 'live'
           fail-below-score: '0'
           open-pr: 'false'
           output-dir: 'brief-output'
+          splunk-mcp-url: ${{ secrets.SPLUNK_MCP_URL }}
+          splunk-mcp-token: ${{ secrets.SPLUNK_MCP_TOKEN }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
