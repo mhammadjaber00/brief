@@ -22,19 +22,14 @@ async def main() -> int:
     console.print(Rule("[bold]Brief — splunklib.ai Agent demo[/bold]"))
     console.print(f"Provider: [cyan]{provider}[/cyan]")
 
-    try:
-        agent = build_brief_agent(provider=provider)
-    except RuntimeError as exc:
-        console.print(f"[red]error:[/red] {exc}")
-        return 2
+    agent = build_brief_agent(provider=provider)
 
     console.print(f"Constructed: [green]{type(agent).__module__}.{type(agent).__name__}[/green]")
     console.print(f"  name:        [bold]{agent.name}[/bold]")
     console.print(f"  description: {agent.description}")
     console.print(f"  model:       {type(agent.model).__name__}")
     console.print(f"  limits:      max_steps={agent.limits.max_steps}, timeout={agent.limits.timeout}s")
-    allowlist = agent.tool_settings.local.allowlist
-    console.print(f"  tools:       {list(allowlist.names)}")
+    console.print(f"  tools:       {list(agent.tool_settings.local.allowlist.names)}")
 
     prompt = (
         f"Use the scan_app tool on the path {target!r} and report:\n"
