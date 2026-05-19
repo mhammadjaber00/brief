@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import sys
 
 from dotenv import load_dotenv
@@ -14,7 +15,7 @@ load_dotenv()
 console = Console()
 
 
-def main() -> int:
+async def main() -> int:
     provider = sys.argv[1] if len(sys.argv) > 1 else "google"
     target = sys.argv[2] if len(sys.argv) > 2 else "tests/fixtures/sample-ta-1"
 
@@ -47,8 +48,9 @@ def main() -> int:
     console.print(prompt)
 
     console.print(Rule("[dim]Agent run[/dim]"))
-    with console.status("[bold]Agent running (tool calls + LLM turns)…[/bold]"):
-        response = agent.invoke([HumanMessage(content=prompt)])
+    async with agent:
+        with console.status("[bold]Agent running (tool calls + LLM turns)…[/bold]"):
+            response = await agent.invoke([HumanMessage(content=prompt)])
 
     console.print(Rule("[dim]Final response[/dim]"))
     final = response.final_message.content if hasattr(response.final_message, "content") else str(response.final_message)
@@ -57,4 +59,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(asyncio.run(main()))

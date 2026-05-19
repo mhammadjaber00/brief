@@ -119,9 +119,15 @@ def build_brief_agent(provider: Literal["google", "anthropic"] = "google"):
 
     host = os.environ.get("SPLUNK_HOST", "localhost")
     port = int(os.environ.get("SPLUNK_PORT", "8089"))
-    token = os.environ.get("SPLUNK_TOKEN") or os.environ.get("SPLUNK_MCP_TOKEN")
-    if not token:
-        raise RuntimeError("SPLUNK_TOKEN (or SPLUNK_MCP_TOKEN) must be set to build the agent")
+    username = os.environ.get("SPLUNK_USERNAME")
+    password = os.environ.get("SPLUNK_PASSWORD")
+    token = os.environ.get("SPLUNK_TOKEN")
+    if not (username and password) and not token:
+        raise RuntimeError(
+            "Agent's Splunk service needs either SPLUNK_USERNAME+SPLUNK_PASSWORD or "
+            "SPLUNK_TOKEN (a Splunk auth token from Settings -> Tokens, NOT the MCP "
+            "encrypted token which is MCP-specific)."
+        )
 
     if provider == "google":
         api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
@@ -143,7 +149,12 @@ def build_brief_agent(provider: Literal["google", "anthropic"] = "google"):
     else:
         raise ValueError(f"provider must be 'google' or 'anthropic', got {provider!r}")
 
-    service = connect(host=host, port=port, token=token, scheme="https", verify=False)
+    connect_kwargs = {"host": host, "port": port, "scheme": "https", "verify": False}
+    if username and password:
+        connect_kwargs.update({"username": username, "password": password})
+    else:
+        connect_kwargs["token"] = token
+    service = connect(**connect_kwargs)
 
     registry = ToolRegistry()
 
