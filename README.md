@@ -75,6 +75,22 @@ Brief routes saved searches to one of the two Splunk Hosted Models depending on 
 
 Both are reached two ways: via **Splunk Cloud-Connected SAIA** when the tenant tier allows, or via **local Ollama** with the open-weight models. Brief tries Cloud-Connected first in `--mode live`, falls back to local Ollama, and falls back again to `gpt-oss:20b` if Foundation-Sec isn't installed.
 
+### Live demo of the `splunklib.ai.Agent` (free)
+
+`scripts/demo-agent.py` constructs Brief's real `splunklib.ai.Agent`, registers the pipeline as `ToolRegistry` tools, and invokes it on a fixture app. Default provider is **Gemini 2.5 Flash** via Google AI Studio's free tier.
+
+```bash
+# Get a free key at https://aistudio.google.com/apikey, then:
+export GEMINI_API_KEY=your-key-here
+.venv/bin/python scripts/demo-agent.py
+
+# Or against a different fixture / use Anthropic Claude:
+.venv/bin/python scripts/demo-agent.py google tests/fixtures/ta-osquery
+.venv/bin/python scripts/demo-agent.py anthropic   # needs ANTHROPIC_API_KEY
+```
+
+Shows the Agent name, tool allowlist, AgentLimits, then runs an end-to-end audit query and prints the agent's final answer.
+
 ### Set up Foundation-Sec locally (optional)
 
 The Foundation-Sec weights aren't on Ollama's default library yet. One-time setup downloads the safetensors from HuggingFace and registers them with Ollama:

@@ -36,10 +36,9 @@ Items the spec calls for that are intentionally not done yet. Each entry lists w
 - **Fallback in place:** `brief.spl.explain(mode="live")` catches `SaiaExplanationError` and falls back to Ollama. Pipeline runs end-to-end either way.
 
 ### splunklib.ai.Agent end-to-end runtime verification
-- **Status:** `build_brief_agent()` (in `src/brief/agent.py`) constructs the real Agent with the correct SDK shape — `ToolRegistry` with `@registry.tool` decorator, `ToolAllowlist` allowlist, `ToolSettings`, `AnthropicModel`, `AgentLimits`, `splunklib.client.connect` for the `service`. Construction not exercised at runtime.
-- **Why deferred:** the chat/tool loop needs `ANTHROPIC_API_KEY` (or Cloud Hosted Models) to actually invoke the model. The deterministic Stage 1-4 pipeline runs through `audit_app()` and doesn't go through the SDK Agent.
-- **Unblocks:** set `ANTHROPIC_API_KEY` and run an interactive Agent session to verify `Agent.messages` state tracking (the PR #743 surface). Or wait for Cloud Hosted Models.
-- **What the spec wanted:** "Agent state is correctly tracked via `.messages` — verify by inspecting the agent run trace." Construction is correct; trace inspection waits.
+- **Status:** `build_brief_agent(provider="google"|"anthropic")` constructs the real Agent with the correct SDK shape — `ToolRegistry` with `@registry.tool` decorator, `ToolAllowlist`, `ToolSettings`, `GoogleModel`/`AnthropicModel`, `AgentLimits`, `splunklib.client.connect` for the `service`. Live runtime demoable via `scripts/demo-agent.py`.
+- **Unblock:** `export GEMINI_API_KEY=...` (free at https://aistudio.google.com/apikey) then run `scripts/demo-agent.py`. Output captures the Agent run trace including tool calls — that's the `Agent.messages` state surface PR #743 introduced.
+- **What the spec wanted:** "Agent state is correctly tracked via `.messages` — verify by inspecting the agent run trace." Demo script makes this trivial to record for the submission video.
 
 ## Step 07 — Splunk app deployment shape
 

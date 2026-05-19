@@ -91,23 +91,27 @@ def _macros_dict(objects: list[ObjectSignals]) -> dict[str, dict[str, str]]:
     return out
 
 
-def build_brief_agent():
+def build_brief_agent(provider: Literal["google", "anthropic"] = "google"):
     """Construct a splunklib.ai.Agent that exposes Brief's pipeline as tools.
 
     Wires Brief's scanner / SPL explainer / generator into a `ToolRegistry`,
     allowlists those four tool names via `ToolSettings`, and wraps the lot in
     an `Agent` connected to the local Splunk Enterprise instance.
 
-    Requires `SPLUNK_HOST` / `SPLUNK_TOKEN` (defaults to localhost + SPLUNK_MCP_TOKEN)
-    and `ANTHROPIC_API_KEY` (the Agent's model). The deterministic Stage 1-4
-    pipeline runs through `audit_app()` directly; this builder is the chat /
-    tool-calling surface that demonstrates `splunklib.ai` usage.
+    `provider="google"` (default) uses `gemini-2.5-flash` via the free-tier
+    Gemini API — needs GEMINI_API_KEY (or GOOGLE_API_KEY) in env.
+    `provider="anthropic"` uses `claude-sonnet-4-6` — needs ANTHROPIC_API_KEY.
 
-    The state field is `Agent.messages` (PR #743), limits live in
-    `splunklib.ai.limits` (PR #759), and the agent runs as the dedicated
-    `brief_agent` Splunk user (never as system per PR #753).
+    Splunk service connection: SPLUNK_HOST / SPLUNK_PORT default to
+    localhost:8089; SPLUNK_TOKEN falls back to SPLUNK_MCP_TOKEN.
+
+    The deterministic Stage 1-4 pipeline runs through `audit_app()` directly;
+    this builder is the chat / tool-calling surface that demonstrates
+    `splunklib.ai` usage. Agent state lives in `Agent.messages` (PR #743),
+    limits in `splunklib.ai.limits` (PR #759), runs as the dedicated
+    brief_agent Splunk user (never as system per PR #753).
     """
-    from splunklib.ai import Agent, AnthropicModel
+    from splunklib.ai import Agent, AnthropicModel, GoogleModel
     from splunklib.ai.limits import AgentLimits
     from splunklib.ai.registry import ToolRegistry
     from splunklib.ai.tool_settings import LocalToolSettings, ToolAllowlist, ToolSettings
@@ -119,12 +123,25 @@ def build_brief_agent():
     if not token:
         raise RuntimeError("SPLUNK_TOKEN (or SPLUNK_MCP_TOKEN) must be set to build the agent")
 
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not anthropic_key:
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY required for build_brief_agent. Use audit_app() for the "
-            "offline deterministic pipeline."
+    if provider == "google":
+        api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "GEMINI_API_KEY (or GOOGLE_API_KEY) required for provider='google'. "
+                "Get a free key at https://aistudio.google.com/apikey"
+            )
+        model = GoogleModel(model="gemini-2.5-flash", api_key=api_key)
+    elif provider == "anthropic":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY required for provider='anthropic'.")
+        model = AnthropicModel(
+            model="claude-sonnet-4-6",
+            api_key=api_key,
+            base_url="https://api.anthropic.com",
         )
+    else:
+        raise ValueError(f"provider must be 'google' or 'anthropic', got {provider!r}")
 
     service = connect(host=host, port=port, token=token, scheme="https", verify=False)
 
@@ -194,11 +211,7 @@ def build_brief_agent():
     )
 
     return Agent(
-        model=AnthropicModel(
-            model="claude-sonnet-4-6",
-            api_key=anthropic_key,
-            base_url="https://api.anthropic.com",
-        ),
+        model=model,
         service=service,
         system_prompt=(
             "You audit Splunk apps for AI-agent-readiness. Use the registered tools to "
